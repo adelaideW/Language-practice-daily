@@ -23,7 +23,8 @@ import {
 } from './pinyinText.js'
 import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
-import { PUNCT_KEYS, punctTypingKey } from './punct.js'
+import { punctTypingKey } from './punct.js'
+import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 
 function escapeHtml(s) {
   return String(s)
@@ -716,9 +717,12 @@ function patchKeyboardHints() {
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
   const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
+  const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
+  const punctSet = new Set(punctTargets)
   document.querySelectorAll('.key[data-key]').forEach((el) => {
     const keyId = el.dataset.key
-    el.classList.toggle('hint', Boolean(punctKey && keyId === punctKey))
+    el.classList.toggle('hint', Boolean(punctKey && punctSet.has(keyId)))
+    el.classList.toggle('hint-shift', Boolean(punctKey && needShift && keyId === 'Shift'))
     el.classList.toggle('hint-initial', Boolean(initKey && keyId === initKey && typedLen === 0))
     el.classList.toggle('hint-final', Boolean(finalKey && keyId === finalKey && typedLen === 1))
   })
@@ -1149,6 +1153,14 @@ function renderStats() {
 
 function renderKeyboard() {
   const layout = getLayout(settings.scheme)
+  const overlays = new Map()
+  for (const row of layout) {
+    for (const [display, initLabel, finalLabel] of row) {
+      const keyId = display === ';' ? ';' : display.toLowerCase()
+      overlays.set(keyId, { display, initLabel, finalLabel })
+    }
+  }
+
   const t = currentTarget()
   const code = currentCode()
   const punctKey =
@@ -1158,55 +1170,40 @@ function renderKeyboard() {
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
   const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
+  const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
+  const punctSet = new Set(punctTargets)
 
-  const rows = layout
-    .map(
-      (row) => `
-    <div class="kb-row">
-      ${row
-        .map(([display, initLabel, finalLabel]) => {
-          const keyId = display === ';' ? ';' : display.toLowerCase()
-          const classes = ['key']
-          if (initKey && keyId === initKey && typedLen === 0) classes.push('hint-initial')
-          if (finalKey && keyId === finalKey && typedLen === 1) classes.push('hint-final')
-          return `
-            <div class="${classes.join(' ')}" data-key="${keyId}">
-              <span class="k-init">${initLabel}</span>
-              <span class="k-main">${display}</span>
-              <span class="k-final">${finalLabel}</span>
-            </div>
-          `
-        })
-        .join('')}
-    </div>
-  `,
-    )
-    .join('')
-
-  const punctRow = `
-    <div class="kb-row kb-row-punct">
-      ${PUNCT_KEYS.map((k) => {
-        const classes = ['key', 'key-punct']
-        if (punctKey && k === punctKey) classes.push('hint')
+  const rows = renderAnsiKeyboardRows({
+    lang: 'zh',
+    tag: 'div',
+    extraClasses: (key) => {
+      const parts = []
+      if (punctKey && punctSet.has(key.id)) parts.push('hint')
+      if (punctKey && needShift && key.id === 'Shift') parts.push('hint-shift')
+      if (initKey && key.id === initKey && typedLen === 0) parts.push('hint-initial')
+      if (finalKey && key.id === finalKey && typedLen === 1) parts.push('hint-final')
+      return parts.join(' ')
+    },
+    renderInner: (key) => {
+      const ov = overlays.get(key.id)
+      if (ov) {
         return `
-          <div class="${classes.join(' ')}" data-key="${k}">
-            <span class="k-init"></span>
-            <span class="k-main">${k}</span>
-            <span class="k-final"></span>
-          </div>`
-      }).join('')}
-    </div>
-  `
-
-  const spaceRow = `
-    <div class="kb-row">
-      <div class="key key-wide key-punct ${punctKey === ' ' ? 'hint' : ''}" data-key=" ">
-        <span class="k-init"></span>
-        <span class="k-main">space</span>
-        <span class="k-final"></span>
-      </div>
-    </div>
-  `
+              <span class="k-init">${ov.initLabel}</span>
+              <span class="k-main">${ov.display}</span>
+              <span class="k-final">${ov.finalLabel}</span>`
+      }
+      if (key.id === ' ') {
+        return `
+              <span class="k-init"></span>
+              <span class="k-main">space</span>
+              <span class="k-final"></span>`
+      }
+      return `
+              <span class="k-init"></span>
+              <span class="k-main">${key.label}</span>
+              <span class="k-final"></span>`
+    },
+  })
 
   return `
     <div class="keyboard-wrap">
@@ -1214,10 +1211,8 @@ function renderKeyboard() {
         <span class="init">声母</span>
         <span class="final">韵母</span>
       </div>
-      <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
+      <div class="keyboard keyboard-full ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
         ${rows}
-        ${punctRow}
-        ${spaceRow}
       </div>
     </div>
   `

@@ -853,6 +853,12 @@ body::before {
   transition: opacity 0.25s, filter 0.25s;
 }
 
+.keyboard.keyboard-full {
+  max-width: 920px;
+  gap: 0.32rem;
+  padding: 0.85rem;
+}
+
 .keyboard.covered {
   filter: blur(7px);
   opacity: 0.45;
@@ -866,11 +872,18 @@ body::before {
   gap: 0.35rem;
 }
 
-.kb-row:nth-child(2) {
+.keyboard-full .kb-row {
+  justify-content: stretch;
+  width: 100%;
+  gap: 0.28rem;
+}
+
+/* Legacy compact layouts (letter rows only) */
+.keyboard:not(.keyboard-full) .kb-row:nth-child(2) {
   padding-left: 1.1rem;
 }
 
-.kb-row:nth-child(3) {
+.keyboard:not(.keyboard-full) .kb-row:nth-child(3) {
   padding-left: 2.4rem;
 }
 
@@ -887,6 +900,101 @@ body::before {
   padding: 0.35rem 0.2rem 0.3rem;
   box-shadow: 0 1px 0 rgba(26, 35, 50, 0.06);
   transition: transform 0.1s, background 0.15s, border-color 0.15s, color 0.15s;
+  font: inherit;
+  color: inherit;
+  cursor: default;
+}
+
+.keyboard-full .key {
+  width: auto;
+  flex: 1 1 0;
+  min-width: 0;
+  height: clamp(2.7rem, 6.4vw, 3.45rem);
+  padding: 0.28rem 0.12rem 0.22rem;
+  font-size: 0.72rem;
+}
+
+.keyboard-full .key .k-main {
+  font-size: 0.82rem;
+}
+
+.keyboard-full .key-size-backspace {
+  flex: 2.05 1 0;
+}
+
+.keyboard-full .key-size-tab {
+  flex: 1.55 1 0;
+}
+
+.keyboard-full .key-size-backslash {
+  flex: 1.45 1 0;
+}
+
+.keyboard-full .key-size-caps {
+  flex: 1.85 1 0;
+}
+
+.keyboard-full .key-size-enter {
+  flex: 2.25 1 0;
+}
+
+.keyboard-full .key-size-shift {
+  flex: 2.45 1 0;
+}
+
+.keyboard-full .key-size-mod {
+  flex: 1.15 1 0;
+}
+
+.keyboard-full .key-size-space {
+  flex: 6.2 1 0;
+}
+
+.keyboard-full .key-disabled {
+  opacity: 0.42;
+  background: color-mix(in srgb, var(--surface-solid) 70%, var(--line));
+  color: var(--muted);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.keyboard-full .key-disabled .k-main,
+.keyboard-full .key-disabled .k-init,
+.keyboard-full .key-disabled .k-final,
+.keyboard-full .key-disabled .k-hira {
+  color: var(--muted);
+}
+
+.keyboard-full .key.hint-shift:not(.key-disabled),
+.keyboard-full .key.hint-shift {
+  opacity: 1;
+  border-color: var(--coral);
+  background: var(--coral-soft);
+  color: var(--ink);
+  transform: translateY(-2px);
+  pointer-events: none;
+}
+
+.keyboard-full button.key {
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: none;
+}
+
+.keyboard-full button.key.key-size-backspace,
+.keyboard-full button.key.key-size-tab,
+.keyboard-full button.key.key-size-caps,
+.keyboard-full button.key.key-size-enter,
+.keyboard-full button.key.key-size-shift,
+.keyboard-full button.key.key-size-mod,
+.keyboard-full button.key.key-size-space {
+  font-family: var(--font-body);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
 }
 
 .key .k-main {
@@ -1343,6 +1451,10 @@ body::before {
 
 .keyboard .key-wide {
   width: clamp(8rem, 28vw, 14rem);
+}
+
+.keyboard-full .key-wide {
+  width: auto;
 }
 
 /* Language rail */

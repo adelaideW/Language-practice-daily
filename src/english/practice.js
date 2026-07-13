@@ -27,6 +27,7 @@ import {
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
 import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
+import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -39,13 +40,6 @@ const MODES = [
 
 const DURATION_PRESETS = [3, 5, 10, 15]
 const IDLE_PAUSE_MS = 60_000
-
-const QWERTY = [
-  ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-  ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"],
-  ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?', '!'],
-  [' '],
-]
 
 function loadMode() {
   const saved = localStorage.getItem(STORAGE_MODE)
@@ -683,30 +677,34 @@ export function bootEnglish(root) {
 
   function patchKeyboardHints() {
     const want = expectedKeyLabel()
+    const { keys, needShift } = resolveHintKeys(want)
+    const keySet = new Set(keys)
     document.querySelectorAll('.key').forEach((el) => {
       const k = el.dataset.key
-      el.classList.toggle('hint', k === want)
-      el.classList.toggle('hint-shift', false)
+      el.classList.toggle('hint', keySet.has(k))
+      el.classList.toggle('hint-shift', needShift && k === 'Shift')
     })
   }
 
   function renderKeyboard() {
     const want = expectedKeyLabel()
-    const rows = QWERTY.map((row) => {
-      const keys = row
-        .map((k) => {
-          const label = k === ' ' ? 'space' : k
-          const wide = k === ' ' ? ' key-wide' : ''
-          const hint = k === want ? ' hint' : ''
-          return `<button type="button" class="key${wide}${hint}" data-key="${escapeHtml(k)}" tabindex="-1">${escapeHtml(label)}</button>`
-        })
-        .join('')
-      return `<div class="kb-row">${keys}</div>`
-    }).join('')
+    const { keys, needShift } = resolveHintKeys(want)
+    const keySet = new Set(keys)
+    const rows = renderAnsiKeyboardRows({
+      lang: 'en',
+      tag: 'button',
+      extraClasses: (key) => {
+        const parts = []
+        if (keySet.has(key.id)) parts.push('hint')
+        if (needShift && key.id === 'Shift') parts.push('hint-shift')
+        return parts.join(' ')
+      },
+      renderInner: (key) => (key.id === ' ' ? 'space' : escapeHtml(key.label)),
+    })
 
     return `
       <div class="keyboard-wrap">
-        <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}">${rows}</div>
+        <div class="keyboard keyboard-full ${settings.keyboardCovered ? 'covered' : ''}">${rows}</div>
       </div>
     `
   }

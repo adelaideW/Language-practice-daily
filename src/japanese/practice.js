@@ -27,7 +27,8 @@ import {
 } from './mistakes.js'
 import { loadJapaneseLibrary, addJapaneseDoc, removeJapaneseDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
-import { PUNCT_KEYS, punctTypingKey } from '../punct.js'
+import { punctTypingKey } from '../punct.js'
+import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -933,39 +934,37 @@ export function bootJapanese(root) {
       b: 'こ',
       n: 'み',
       m: 'も',
+      '-': 'ー',
     }
-    const rows = [
-      ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-      ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '-'],
-      ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
-      [...PUNCT_KEYS.filter((k) => k !== '-')],
-      [' '],
-    ]
     const cur = currentTarget()
-    const nextKey = currentExpected()[state.buffer.length] || ''
-    const html = rows
-      .map(
-        (row) =>
-          `<div class="kb-row">${row
-            .map((k) => {
-              const hira = hiraOnKey[k] || (k === '-' ? 'ー' : '')
-              const label = k === ' ' ? 'space' : k === '-' ? '-' : k
-              const wide = k === ' ' ? ' key-wide' : ''
-              const hinted =
-                cur?.kind === 'punct' || cur?.kind === 'space'
-                  ? k === currentExpected()
-                  : k === nextKey
-              return `<button type="button" class="key key-jp${wide} ${hinted ? 'hint' : ''}" data-key="${escapeHtml(k)}" tabindex="-1">
-                <span class="k-hira">${hira}</span>
-                <span class="k-main">${escapeHtml(label)}</span>
-              </button>`
-            })
-            .join('')}</div>`,
-      )
-      .join('')
+    const want =
+      cur?.kind === 'punct' || cur?.kind === 'space'
+        ? currentExpected()
+        : currentExpected()[state.buffer.length] || ''
+    const { keys, needShift } = resolveHintKeys(want)
+    const keySet = new Set(keys)
+    const html = renderAnsiKeyboardRows({
+      lang: 'ja',
+      tag: 'button',
+      extraKeyClass: 'key-jp',
+      extraClasses: (key) => {
+        const parts = []
+        if (keySet.has(key.id)) parts.push('hint')
+        if (needShift && key.id === 'Shift') parts.push('hint-shift')
+        return parts.join(' ')
+      },
+      renderInner: (key) => {
+        if (key.id === ' ') return '<span class="k-hira"></span><span class="k-main">space</span>'
+        const hira = hiraOnKey[key.id] || ''
+        if (/^[a-z;-]$/.test(key.id) || key.id === '-') {
+          return `<span class="k-hira">${hira}</span><span class="k-main">${escapeHtml(key.label)}</span>`
+        }
+        return `<span class="k-hira"></span><span class="k-main">${escapeHtml(key.label)}</span>`
+      },
+    })
     return `
       <div class="keyboard-wrap">
-        <div class="keyboard keyboard-jp ${settings.keyboardCovered ? 'covered' : ''}">${html}</div>
+        <div class="keyboard keyboard-jp keyboard-full ${settings.keyboardCovered ? 'covered' : ''}">${html}</div>
       </div>`
   }
 

@@ -29,7 +29,7 @@ export const PUNCT_TO_KEY = {
   '－': '-',
 }
 
-/** Punctuation keys shown on practice keyboards (no number row / brackets clutter). */
+/** Common punctuation keys (legacy; full keyboard uses physical ANSI positions). */
 export const PUNCT_KEYS = [',', '.', '?', '!', "'", '"', ';', ':', '-', '/']
 
 /**
