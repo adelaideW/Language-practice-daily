@@ -227,6 +227,22 @@ export function keysForCode(code) {
   return { initial: code[0], final: code[1] }
 }
 
+/**
+ * j/q/x/y + ü is spelled with "u" in pinyin but keyed as "v" in 小鹤/自然码 (搜狗 uses y).
+ * Accept both u and v as the second key (距: ju ≡ jv). Do not alias n/l + ü — nu/lu are other syllables.
+ * @param {string} pinyin
+ * @param {string} code canonical 2-key code
+ * @returns {string[]}
+ */
+export function withUvCodeAliases(pinyin, code) {
+  if (!code || code.length !== 2) return code ? [code] : []
+  const py = normalizePinyin(pinyin)
+  if (!/^[jqxy][uv]$/.test(py)) return [code]
+  const init = code[0]
+  const ordered = [code, `${init}v`, `${init}u`]
+  return [...new Set(ordered)]
+}
+
 /** Quick self-check used in console during development */
 export function selfTest() {
   const cases = [
@@ -255,14 +271,34 @@ export function selfTest() {
     ['lü', 'lv'],
     ['nü', 'nv'],
     ['jue', 'jt'],
+    ['ju', 'jv'],
+    ['qu', 'qv'],
+    ['xu', 'xv'],
     ['chi', 'ii'],
     ['shi', 'ui'],
     ['zhi', 'vi'],
     ['qiu', 'qq'],
     ['lv', 'lv'],
   ]
-  return cases.map(([py, expect]) => {
+  const encodeOk = cases.map(([py, expect]) => {
     const got = toXiaohe(py)
     return { py, expect, got, ok: got === expect }
   })
+  const aliasCases = [
+    ['ju', ['jv', 'ju']],
+    ['qu', ['qv', 'qu']],
+    ['xu', ['xv', 'xu']],
+    ['yu', ['yv', 'yu']],
+    ['jv', ['jv', 'ju']],
+    ['nü', ['nv']],
+    ['lü', ['lv']],
+    ['dui', ['dv']],
+    ['jue', ['jt']],
+  ]
+  const aliasOk = aliasCases.map(([py, expect]) => {
+    const got = withUvCodeAliases(py, toXiaohe(py))
+    const ok = got.length === expect.length && expect.every((c, i) => got[i] === c)
+    return { py, expect, got, ok }
+  })
+  return [...encodeOk, ...aliasOk]
 }

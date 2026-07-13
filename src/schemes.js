@@ -6,11 +6,12 @@ import {
   normalizePinyin,
   splitSyllable,
   toXiaohe,
+  withUvCodeAliases,
   KEYBOARD_LAYOUT as XIAOHE_LAYOUT,
   selfTest as xiaoheSelfTest,
 } from './xiaohe.js'
 
-export { normalizePinyin, splitSyllable }
+export { normalizePinyin, splitSyllable, withUvCodeAliases }
 
 export const SCHEMES = {
   xiaohe: {
@@ -283,6 +284,17 @@ export function toSogou(pinyin) {
 export function encode(schemeId, pinyin) {
   const scheme = SCHEMES[schemeId] || SCHEMES.xiaohe
   return scheme.encode(pinyin)
+}
+
+/**
+ * All accepted 2-key codes for a syllable (canonical first; ju/qv/… also allow u).
+ * @param {string} schemeId
+ * @param {string} pinyin
+ * @returns {string[]}
+ */
+export function encodeOptions(schemeId, pinyin) {
+  const code = encode(schemeId, pinyin)
+  return withUvCodeAliases(pinyin, code)
 }
 
 /**

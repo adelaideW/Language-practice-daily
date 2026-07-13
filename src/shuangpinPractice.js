@@ -1,4 +1,4 @@
-import { encode, getLayout, getSchemeLabel, selfTestScheme } from './schemes.js'
+import { encode, encodeOptions, getLayout, getSchemeLabel, selfTestScheme } from './schemes.js'
 import { CHARACTERS, SENTENCES, ARTICLES, buildUnits } from './data.js'
 import {
   loadSettings,
@@ -124,6 +124,17 @@ function currentCode() {
   if (!t) return ''
   if (t.kind === 'punct' || t.kind === 'space') return t.expected || punctTypingKey(t.char)
   return encode(settings.scheme, t.pinyin)
+}
+
+/** Accepted codes for the current syllable (e.g. jv + ju for 距). */
+function currentCodes() {
+  const t = currentTarget()
+  if (!t) return []
+  if (t.kind === 'punct' || t.kind === 'space') {
+    const c = t.expected || punctTypingKey(t.char)
+    return c ? [c] : []
+  }
+  return encodeOptions(settings.scheme, t.pinyin)
 }
 
 function formatTime(ms) {
@@ -705,18 +716,23 @@ function patchPinyinLine() {
     line.textContent = t.kind === 'space' ? `space` : `${t.char} · ${currentCode()}`
     return
   }
-  line.textContent = `${t.pinyin} · ${encode(settings.scheme, t.pinyin)}`
+  const codes = encodeOptions(settings.scheme, t.pinyin)
+  line.textContent = `${t.pinyin} · ${codes.join(' / ')}`
 }
 
 function patchKeyboardHints() {
   const t = currentTarget()
   const code = currentCode()
+  const codes = currentCodes()
   const punctKey =
     (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
       ? code
       : ''
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
+  const finalKeys =
+    !punctKey && settings.showHints && codes.length && !state.sessionFinished
+      ? [...new Set(codes.map((c) => c[1]).filter(Boolean))]
+      : []
   const typedLen = state.buffer.length
   const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
   const punctSet = new Set(punctTargets)
@@ -725,7 +741,10 @@ function patchKeyboardHints() {
     el.classList.toggle('hint', Boolean(punctKey && punctSet.has(keyId)))
     el.classList.toggle('hint-shift', Boolean(punctKey && needShift && keyId === 'Shift'))
     el.classList.toggle('hint-initial', Boolean(initKey && keyId === initKey && typedLen === 0))
-    el.classList.toggle('hint-final', Boolean(finalKey && keyId === finalKey && typedLen === 1))
+    el.classList.toggle(
+      'hint-final',
+      Boolean(finalKeys.includes(keyId) && typedLen === 1),
+    )
   })
 }
 
@@ -875,15 +894,16 @@ function handleKey(key) {
   noteActivity()
   state.keystrokes += 1
   const nextBuf = state.buffer + lower
-  const expected = code.slice(0, nextBuf.length)
+  const options = currentCodes()
+  const matchesPrefix = options.some((c) => c.slice(0, nextBuf.length) === nextBuf)
 
-  if (nextBuf !== expected) {
+  if (!matchesPrefix) {
     onWrongKey(nextBuf)
     return
   }
 
   state.buffer = nextBuf
-  if (state.buffer === code) onCorrectSyllable()
+  if (options.includes(state.buffer)) onCorrectSyllable()
   else patchLive()
 }
 
@@ -1166,12 +1186,16 @@ function renderKeyboard() {
 
   const t = currentTarget()
   const code = currentCode()
+  const codes = currentCodes()
   const punctKey =
     (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
       ? code
       : ''
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
+  const finalKeys =
+    !punctKey && settings.showHints && codes.length && !state.sessionFinished
+      ? [...new Set(codes.map((c) => c[1]).filter(Boolean))]
+      : []
   const typedLen = state.buffer.length
   const { keys: punctTargets, needShift } = resolveHintKeys(punctKey)
   const punctSet = new Set(punctTargets)
@@ -1184,7 +1208,7 @@ function renderKeyboard() {
       if (punctKey && punctSet.has(key.id)) parts.push('hint')
       if (punctKey && needShift && key.id === 'Shift') parts.push('hint-shift')
       if (initKey && key.id === initKey && typedLen === 0) parts.push('hint-initial')
-      if (finalKey && key.id === finalKey && typedLen === 1) parts.push('hint-final')
+      if (finalKeys.includes(key.id) && typedLen === 1) parts.push('hint-final')
       return parts.join(' ')
     },
     renderInner: (key) => {
@@ -1240,11 +1264,11 @@ function renderCharacterStage() {
   if (state.sessionFinished) return renderSessionSummary()
   const t = state.currentChar
   if (!t) return ''
-  const code = encode(settings.scheme, t.pinyin)
+  const codes = encodeOptions(settings.scheme, t.pinyin)
   return `
     <div class="char-stage">
       <div class="hanzi">${t.char}</div>
-      <div class="pinyin-line">${t.pinyin} · ${code}</div>
+      <div class="pinyin-line">${t.pinyin} · ${codes.join(' / ')}</div>
       ${renderCodeSlots()}
     </div>
   `
@@ -1317,7 +1341,7 @@ function renderPassageStage() {
     })
     .join('')
 
-  const code = currentCode()
+  const codes = currentCodes()
   const multiPage = state.pages.length > 1
   const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}`
 
@@ -1349,7 +1373,7 @@ function renderPassageStage() {
         <div class="passage poem">${chars}</div>
       </div>
       <div class="typing-chrome">
-        <div class="pinyin-line">${currentUnit ? `${currentUnit.pinyin} · ${code}` : ''}</div>
+        <div class="pinyin-line">${currentUnit ? `${currentUnit.pinyin} · ${codes.join(' / ')}` : ''}</div>
         ${renderCodeSlots()}
       </div>
       ${state.uploadMessage ? `<p class="upload-msg">${state.uploadMessage}</p>` : ''}
