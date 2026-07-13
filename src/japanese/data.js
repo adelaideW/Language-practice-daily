@@ -229,8 +229,60 @@ export function passageDisplayText(passage) {
   return (passage.segments || []).map((s) => s.surface).join('')
 }
 
+/**
+ * Article length for Japanese: 1 character (kanji/kana/punct) = 1 word.
+ * Spaces are ignored; matches speaking measure for ja.
+ * @param {JpPassage | string} passageOrText
+ */
+export function countJapaneseChars(passageOrText) {
+  const text =
+    typeof passageOrText === 'string' ? passageOrText : passageDisplayText(passageOrText)
+  return [...String(text || '')].filter((ch) => !/\s/.test(ch)).length
+}
+
 export function countJapaneseUnits(passage) {
   return (passage.segments || []).filter((s) => s.kana).length
+}
+
+/**
+ * Fit a typing passage into [minChars, maxChars] by growing (append extras) then trimming.
+ * @param {JpPassage} passage
+ * @param {number} minChars
+ * @param {number} maxChars
+ * @param {JpPassage[]} [extraPassages]
+ * @returns {JpPassage}
+ */
+export function fitJapanesePassage(passage, minChars, maxChars, extraPassages = []) {
+  let min = Math.max(1, Math.floor(Number(minChars) || 1))
+  let max = Math.max(1, Math.floor(Number(maxChars) || min))
+  if (min > max) min = max
+
+  /** @type {JpSegment[]} */
+  let segments = [...(passage?.segments || [])]
+  const usedTitles = new Set([passage?.title])
+
+  for (const extra of extraPassages) {
+    if (countJapaneseChars({ segments }) >= min) break
+    if (!extra?.segments?.length) continue
+    if (usedTitles.has(extra.title)) continue
+    usedTitles.add(extra.title)
+    if (segments.length) {
+      const last = segments[segments.length - 1]
+      if (last?.surface && !/[。！？\n]$/.test(last.surface)) {
+        segments.push({ surface: '。', kana: null })
+      }
+    }
+    segments = segments.concat(extra.segments)
+  }
+
+  while (segments.length > 1 && countJapaneseChars({ segments }) > max) {
+    segments.pop()
+  }
+
+  return {
+    title: passage?.title || '文章',
+    segments,
+  }
 }
 
 /**

@@ -15,9 +15,10 @@ import {
   buildJapaneseUnits,
   buildJapanesePages,
   pageIndexForUnit,
-  countJapaneseUnits,
+  countJapaneseChars,
   passageDisplayText,
   passageFromJapaneseText,
+  fitJapanesePassage,
 } from './data.js'
 import {
   loadJapaneseMistakes,
@@ -29,6 +30,7 @@ import { loadJapaneseLibrary, addJapaneseDoc, removeJapaneseDoc } from './librar
 import { extractFromFile } from '../upload.js'
 import { punctTypingKey } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
+import { speakBudgetFromMinutes } from '../speaking/length.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -304,9 +306,19 @@ export function bootJapanese(root) {
     document.querySelectorAll('[data-restart]').forEach((btn) => btn.addEventListener('click', restartRound))
   }
 
-  function getArticlePool() {
-    const min = settings.speakMinCount || settings.minArticleChars || 20
-    const built = JP_ARTICLES.filter((p) => countJapaneseUnits(p) >= min)
+  function articleLengthBounds() {
+    if (settings.speakLimitMode === 'count') {
+      let min = Math.max(1, Number(settings.speakMinCount) || 40)
+      let max = Math.max(1, Number(settings.speakMaxCount) || 200)
+      if (min > max) min = max
+      return { min, max }
+    }
+    const min = speakBudgetFromMinutes('ja', settings.speakMinMinutes || 1)
+    const max = speakBudgetFromMinutes('ja', settings.speakMaxMinutes || 5)
+    return { min: Math.min(min, max), max: Math.max(min, max) }
+  }
+
+  function allArticleSources() {
     const user = loadJapaneseLibrary()
       .map((d) => {
         try {
@@ -315,14 +327,29 @@ export function bootJapanese(root) {
           return null
         }
       })
-      .filter((p) => p && countJapaneseUnits(p) >= min)
-    const pool = [...built, ...user]
-    return pool.length ? pool : JP_ARTICLES
+      .filter(Boolean)
+    return [...JP_ARTICLES, ...user]
+  }
+
+  function pickFittedArticle(avoid) {
+    const { min, max } = articleLengthBounds()
+    const sources = allArticleSources()
+    if (!sources.length) return null
+
+    const longEnough = sources.filter((p) => countJapaneseChars(p) >= min)
+    const basePool = longEnough.length ? longEnough : sources
+    const base = shufflePick(basePool, avoid)
+    if (!base) return null
+
+    const fillers = sources
+      .filter((p) => p !== base)
+      .sort(() => Math.random() - 0.5)
+    return fitJapanesePassage(base, min, max, fillers)
   }
 
   function pickPassage(mode) {
     if (mode === 'word') return shufflePick(JP_WORDS, state.passage)
-    if (mode === 'article') return shufflePick(getArticlePool(), state.passage)
+    if (mode === 'article') return pickFittedArticle(state.passage)
     return shufflePick(JP_SENTENCES, state.passage)
   }
 
@@ -658,7 +685,7 @@ export function bootJapanese(root) {
       state.passageHistory.push(passage)
       state.historyIndex = state.passageHistory.length - 1
       loadPassageAt(passage)
-      state.uploadMessage = `追加: ${passage.title} · ${countJapaneseUnits(passage)} 単位`
+      state.uploadMessage = `追加: ${passage.title} · ${countJapaneseChars(passage)} 文字`
       state.drawer = null
     } catch (err) {
       state.uploadMessage = err?.message || 'アップロード失敗'
