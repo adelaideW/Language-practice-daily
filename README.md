@@ -1,6 +1,8 @@
-# 小鹤双拼练习
+# Language Typing Practice
 
-Local practice app for [Xiaohe Shuangpin](https://flypy.cc/) Chinese typing, inspired by [ulpb.app](https://ulpb.app/).
+Practice app for Chinese 双拼, English, and Japanese typing.
+
+**Live:** https://language-typing-practice.vercel.app
 
 ## Run locally
 
@@ -12,29 +14,29 @@ npm run dev
 
 Open **http://127.0.0.1:5179/**
 
-## Modes
+## Languages
 
-- **单字练习** — random common characters (default)
-- **句子练习** — short sentences; clean finish auto-loads the next while the timer runs
-- **文章练习** — Tang poems; same auto-advance on a perfect pass
-- **错字本** — recent mistakes + usually-wrong summary
-- **设置** — smart practice, timer mode, shuangpin scheme (小鹤 / 自然码 / 搜狗), hints, etc.
+Switch from the left panel:
 
-Use ◀ ▶ on sentences/articles to revisit earlier passages or load a new one.
+- **双拼** — Xiaohe / 自然码 / 搜狗 Chinese typing
+- **English** — QWERTY letter practice
+- **日本語** — Romaji input with hiragana hints
 
-Your last mode and settings are saved in `localStorage`.
+## Modes (per language)
+
+Character/word, sentence, and article practice, plus mistakes log and settings. Preferences are stored separately per language.
 
 ## Timer
 
-Pick **1 / 3 / 5 / 10** minutes (or a custom value). In settings, choose **auto** (starts on first keystroke) or **manual** (requires 开始计时). When time is up, practice locks and a summary is shown.
+Pick a session length. Settings control auto vs manual start and auto-advance after a passage.
 
-During a timed sentence/article session, finishing a passage **with zero mistakes** automatically loads the next one (configurable in settings).
-
-## Controls
+## Shortcuts
 
 | Key | Action |
 |-----|--------|
-| Letter keys | Type the 2-key Xiaohe code |
-| `Space` | Speak current character |
-| `Esc` | Clear current input |
-| `Backspace` | Delete last key in buffer |
+| Letter keys | Type codes / letters / romaji |
+| `Space` | Speak (双拼) or type space where required |
+| `Esc` | Clear current input / error flash |
+| `⌥R` | Redo current passage (on completion) |
+| `⌥N` | Next passage (on completion) |
+| `Backspace` | Delete last typed key in buffer |

@@ -1,5 +1,5 @@
 {
-  "name": "xiaohe-shuangpin",
+  "name": "language-typing-practice",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,8 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 5179",
-    "deploy": "vercel deploy --yes",
-    "deploy:prod": "vercel deploy --prod --yes"
+    "deploy": "vercel deploy --yes --scope adelaide-projects",
+    "deploy:prod": "vercel deploy --prod --yes --scope adelaide-projects"
   },
   "devDependencies": {
     "vite": "^6.3.5"
