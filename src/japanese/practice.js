@@ -28,7 +28,7 @@ import {
 } from './mistakes.js'
 import { loadJapaneseLibrary, addJapaneseDoc, removeJapaneseDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
-import { punctTypingKey } from '../punct.js'
+import { punctTypingKey, isPracticeTypingKey } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { FALLBACK_LESSONS } from '../speaking/lessons.js'
@@ -1442,7 +1442,7 @@ export function bootJapanese(root) {
     if (state.drawer) return
     if (
       e.key.length === 1 &&
-      (/^[a-zA-Z.,!?;:'"/\- ]$/.test(e.key) || e.key === ' ') &&
+      isPracticeTypingKey(e.key) &&
       !e.metaKey &&
       !e.ctrlKey &&
       !e.altKey

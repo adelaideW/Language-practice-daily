@@ -23,7 +23,7 @@ import {
 } from './pinyinText.js'
 import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
-import { punctTypingKey } from './punct.js'
+import { punctTypingKey, isPracticeTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 
@@ -1666,7 +1666,7 @@ export function bootShuangpin(root) {
       return
     }
     if (state.drawer) return
-    if (e.key.length === 1 && /^[a-zA-Z;.,!?:'"/\- ]$/.test(e.key)) {
+    if (e.key.length === 1 && isPracticeTypingKey(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
       handleKey(e.key)
     }

@@ -29,8 +29,11 @@ export const PUNCT_TO_KEY = {
   '－': '-',
 }
 
+/** Western keys that can be required after mapping article punctuation. */
+export const TYPABLE_ASCII_PUNCT = /[.,!?;:'"()[\]<>\\=`+\-/]/
+
 /** Common punctuation keys (legacy; full keyboard uses physical ANSI positions). */
-export const PUNCT_KEYS = [',', '.', '?', '!', "'", '"', ';', ':', '-', '/']
+export const PUNCT_KEYS = [',', '.', '?', '!', "'", '"', ';', ':', '-', '/', '[', ']', '(', ')']
 
 /**
  * @param {string} ch
@@ -45,7 +48,7 @@ export function isTypableSpace(ch) {
 export function isTypablePunct(ch) {
   if (!ch || [...ch].length !== 1) return false
   if (PUNCT_TO_KEY[ch]) return true
-  return /[.,!?;:'"()\-/]/.test(ch)
+  return TYPABLE_ASCII_PUNCT.test(ch)
 }
 
 /**
@@ -55,8 +58,19 @@ export function isTypablePunct(ch) {
 export function punctTypingKey(ch) {
   if (isTypableSpace(ch)) return ' '
   if (PUNCT_TO_KEY[ch]) return PUNCT_TO_KEY[ch]
-  if (/[.,!?;:'"()\-/]/.test(ch)) return ch
+  if (TYPABLE_ASCII_PUNCT.test(ch)) return ch
   return ''
+}
+
+/**
+ * Whether a keydown `e.key` should be forwarded to typing practice.
+ * @param {string} key
+ */
+export function isPracticeTypingKey(key) {
+  if (!key || key.length !== 1) return false
+  if (/[a-zA-Z0-9 ]/.test(key)) return true
+  if (TYPABLE_ASCII_PUNCT.test(key)) return true
+  return Object.values(PUNCT_TO_KEY).includes(key)
 }
 
 /**

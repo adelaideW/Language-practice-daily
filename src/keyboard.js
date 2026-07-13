@@ -57,20 +57,13 @@ export function resolveHintKeys(want) {
  * @returns {Set<string>}
  */
 export function applicableKeyIds(lang) {
+  void lang
   const letters = 'abcdefghijklmnopqrstuvwxyz'.split('')
-  const sharedPunct = [',', '.', '/', '-', ';', "'"]
-  const set = new Set([...letters, ' ', ...sharedPunct])
-  if (lang === 'en') {
-    for (const d of '0123456789') set.add(d)
-    set.add('[')
-    set.add(']')
-    set.add('\\')
-    set.add('`')
-    set.add('=')
-  } else if (lang === 'ja') {
-    set.add('[')
-    set.add(']')
-  }
+  // Unshifted bases used directly or via Shift for mapped punctuation
+  // (e.g. 「」→[] , （）→Shift+9/0 , ！→Shift+1 , 《》→Shift+,/.)
+  const punctPhysical = [',', '.', '/', '-', ';', "'", '[', ']', '\\', '`', '=']
+  const set = new Set([...letters, ' ', ...punctPhysical])
+  for (const d of '0123456789') set.add(d)
   return set
 }
 
