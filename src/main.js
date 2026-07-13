@@ -66,6 +66,7 @@ const state = {
   historyIndex: -1,
   // drawers
   drawer: null, // 'mistakes' | 'settings' | null
+  drawerJustOpened: false,
 }
 
 const app = document.querySelector('#app')
@@ -271,8 +272,43 @@ function setDuration(mins) {
   focusApp()
 }
 
+function softApplySettingsVisuals(patch) {
+  if (patch.scheme) {
+    const badge = document.querySelector('.brand .scheme')
+    if (badge) badge.textContent = getSchemeLabel(settings.scheme)
+  }
+
+  if (patch.durationMinutes != null && !state.sessionActive) {
+    const timerVal = document.querySelector('#timer-value')
+    if (timerVal) timerVal.textContent = formatTime(state.remainingMs)
+    document.querySelectorAll('#custom-duration').forEach((el) => {
+      el.value = String(state.durationMinutes)
+    })
+    document.querySelectorAll('.dur-btn').forEach((btn) => {
+      btn.classList.toggle('active', Number(btn.dataset.duration) === state.durationMinutes)
+    })
+  }
+
+  if (
+    patch.scheme != null ||
+    patch.showHints != null ||
+    patch.keyboardCovered != null
+  ) {
+    const wrap = document.querySelector('.keyboard-wrap')
+    if (wrap) {
+      const tmp = document.createElement('div')
+      tmp.innerHTML = renderKeyboard()
+      const next = tmp.firstElementChild
+      wrap.replaceWith(next)
+      next.querySelector('#kb-toggle')?.addEventListener('click', () => {
+        applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })
+      })
+    }
+    patchLive()
+  }
+}
+
 function applySettingsPatch(patch) {
-  const wasDrawer = state.drawer
   settings = saveSettings(patch)
   if (patch.durationMinutes != null) {
     state.durationMinutes = settings.durationMinutes
@@ -280,9 +316,15 @@ function applySettingsPatch(patch) {
       state.remainingMs = state.durationMinutes * 60 * 1000
     }
   }
-  state.drawer = wasDrawer
+
+  // While settings drawer is open, avoid full-page rebuild (causes blink)
+  if (state.drawer === 'settings') {
+    softApplySettingsVisuals(patch)
+    return
+  }
+
   render()
-  if (!wasDrawer) focusApp()
+  focusApp()
 }
 
 function ensureSession() {
@@ -314,14 +356,11 @@ function onPassageComplete() {
   const autoOk = settings.autoAdvancePerfect && clean && timed
 
   if (autoOk) {
-    state.autoAdvanceNote = '全部正确 · 下一篇'
-    state.completed = true
-    render()
+    // Skip interstitial banner — load next passage immediately
     clearAdvanceTimer()
-    advanceTimer = setTimeout(() => {
-      if (!state.sessionActive || state.sessionFinished) return
-      goNextPassage()
-    }, 700)
+    state.completed = false
+    state.autoAdvanceNote = ''
+    goNextPassage()
     return
   }
 
@@ -532,6 +571,7 @@ function focusApp() {
 
 function openDrawer(name) {
   state.drawer = name
+  state.drawerJustOpened = true
   render()
 }
 
@@ -580,7 +620,7 @@ function renderMistakesDrawer() {
     : '<li class="empty">还没有记录错误</li>'
 
   return `
-    <aside class="drawer" role="dialog" aria-label="错字本">
+    <aside class="drawer ${state.drawerJustOpened ? 'drawer-enter' : ''}" role="dialog" aria-label="错字本">
       <div class="drawer-head">
         <h2>错字本</h2>
         <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="关闭">×</button>
@@ -618,7 +658,7 @@ function renderSettingsDrawer() {
   ).join('')
 
   return `
-    <aside class="drawer" role="dialog" aria-label="设置">
+    <aside class="drawer ${state.drawerJustOpened ? 'drawer-enter' : ''}" role="dialog" aria-label="设置">
       <div class="drawer-head">
         <h2>设置</h2>
         <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="关闭">×</button>
@@ -940,6 +980,7 @@ function render() {
   `
 
   bindEvents()
+  state.drawerJustOpened = false
   requestAnimationFrame(() => {
     document.querySelector('.practice-card')?.classList.remove('enter')
   })
