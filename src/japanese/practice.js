@@ -80,14 +80,13 @@ function formatAgo(ts) {
   return `${Math.floor(sec / 86400)}日前`
 }
 
-/** Normalize kana → expected romaji for matching. */
+/** Normalize kana → expected romaji for matching (ー stays as `-`). */
 export function expectedRomaji(kana) {
   try {
     const h = toHiragana(String(kana || ''))
     return toRomaji(h)
       .toLowerCase()
-      .replace(/-/g, '')
-      .replace(/[^a-z]/g, '')
+      .replace(/[^a-z-]/g, '')
   } catch {
     return ''
   }
@@ -506,8 +505,8 @@ export function bootJapanese(root) {
   function handleKey(key) {
     if (state.sessionFinished || state.drawer || state.completed) return
     if (!currentTarget()) return
-    const lower = key.toLowerCase()
-    if (!/^[a-z]$/.test(lower)) return
+    const lower = key === '-' ? '-' : key.toLowerCase()
+    if (!/^[a-z-]$/.test(lower)) return
 
     ensureSession()
     noteActivity()
@@ -860,7 +859,7 @@ export function bootJapanese(root) {
     }
     const rows = [
       ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-      ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
+      ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '-'],
       ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
     ]
     const nextKey = currentExpected()[state.buffer.length] || ''
@@ -869,10 +868,11 @@ export function bootJapanese(root) {
         (row) =>
           `<div class="kb-row">${row
             .map((k) => {
-              const hira = hiraOnKey[k] || ''
+              const hira = hiraOnKey[k] || (k === '-' ? 'ー' : '')
+              const label = k === '-' ? '-' : k
               return `<button type="button" class="key key-jp ${k === nextKey ? 'hint' : ''}" data-key="${k}" tabindex="-1">
                 <span class="k-hira">${hira}</span>
-                <span class="k-main">${k}</span>
+                <span class="k-main">${label}</span>
               </button>`
             })
             .join('')}</div>`,
@@ -1090,7 +1090,7 @@ export function bootJapanese(root) {
       return
     }
     if (state.drawer) return
-    if (e.key.length === 1 && /^[a-zA-Z]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    if (e.key.length === 1 && /^[a-zA-Z-]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
       handleKey(e.key)
     }
