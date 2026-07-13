@@ -160,7 +160,9 @@ export function bootJapanese(root) {
   function currentExpected() {
     const t = currentTarget()
     if (!t) return ''
-    if (t.kind === 'punct' || t.expectedKey) return t.expectedKey || punctTypingKey(t.surface)
+    if (t.kind === 'punct' || t.kind === 'space' || t.expectedKey) {
+      return t.expectedKey || punctTypingKey(t.surface)
+    }
     return expectedRomaji(t.kana)
   }
 
@@ -519,14 +521,17 @@ export function bootJapanese(root) {
   function handleKey(key) {
     if (state.sessionFinished || state.drawer || state.completed) return
     if (!currentTarget()) return
-    const punctWant = currentTarget()?.kind === 'punct' ? currentExpected() : ''
-    if (punctWant) {
-      if (key.length !== 1) return
+    const t = currentTarget()
+    const singleWant =
+      t?.kind === 'punct' || t?.kind === 'space' ? currentExpected() : ''
+    if (singleWant) {
+      if (key.length !== 1 && !(singleWant === ' ' && (key === ' ' || key === 'Space'))) return
+      const typed = key === 'Space' ? ' ' : key
       ensureSession()
       noteActivity()
       state.keystrokes += 1
-      if (key === punctWant) onCorrectUnit()
-      else onWrong(key)
+      if (typed === singleWant) onCorrectUnit()
+      else onWrong(typed === ' ' ? 'space' : typed)
       return
     }
     const lower = key === '-' ? '-' : key.toLowerCase()
@@ -612,8 +617,9 @@ export function bootJapanese(root) {
     }
     const hint = document.querySelector('.pinyin-line')
     if (hint && cur) {
-      if (cur.kind === 'punct') {
-        hint.textContent = `${cur.surface} · ${currentExpected()}`
+      if (cur.kind === 'punct' || cur.kind === 'space') {
+        hint.textContent =
+          cur.kind === 'space' ? 'space' : `${cur.surface} · ${currentExpected()}`
       } else {
         const hira = hintHiragana(cur.kana)
         const roma = currentExpected()
@@ -908,6 +914,7 @@ export function bootJapanese(root) {
       ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '-'],
       ['z', 'x', 'c', 'v', 'b', 'n', 'm'],
       [...PUNCT_KEYS.filter((k) => k !== '-')],
+      [' '],
     ]
     const cur = currentTarget()
     const nextKey = currentExpected()[state.buffer.length] || ''
@@ -917,9 +924,13 @@ export function bootJapanese(root) {
           `<div class="kb-row">${row
             .map((k) => {
               const hira = hiraOnKey[k] || (k === '-' ? 'ー' : '')
-              const label = k === '-' ? '-' : k
-              const hinted = cur?.kind === 'punct' ? k === currentExpected() : k === nextKey
-              return `<button type="button" class="key key-jp ${hinted ? 'hint' : ''}" data-key="${escapeHtml(k)}" tabindex="-1">
+              const label = k === ' ' ? 'space' : k === '-' ? '-' : k
+              const wide = k === ' ' ? ' key-wide' : ''
+              const hinted =
+                cur?.kind === 'punct' || cur?.kind === 'space'
+                  ? k === currentExpected()
+                  : k === nextKey
+              return `<button type="button" class="key key-jp${wide} ${hinted ? 'hint' : ''}" data-key="${escapeHtml(k)}" tabindex="-1">
                 <span class="k-hira">${hira}</span>
                 <span class="k-main">${escapeHtml(label)}</span>
               </button>`
@@ -963,7 +974,7 @@ export function bootJapanese(root) {
         <section class="practice-card enter" id="practice-card" tabindex="0">
           ${renderStage()}
           <div class="hints-row hints-row-bottom">
-            <span>ローマ字＋句読点 · 下に<strong>ひらがな</strong>ヒント</span>
+            <span>ローマ字・句読点・スペース · 下に<strong>ひらがな</strong>ヒント</span>
             <span><kbd>Esc</kbd> 入力クリア</span>
             <span><kbd>⌥R</kbd> 再挑戦 · <kbd>⌥N</kbd> 次へ</span>
           </div>
@@ -1156,7 +1167,7 @@ export function bootJapanese(root) {
     if (state.drawer) return
     if (
       e.key.length === 1 &&
-      /^[a-zA-Z.,!?;:'"/\-]$/.test(e.key) &&
+      (/^[a-zA-Z.,!?;:'"/\- ]$/.test(e.key) || e.key === ' ') &&
       !e.metaKey &&
       !e.ctrlKey &&
       !e.altKey

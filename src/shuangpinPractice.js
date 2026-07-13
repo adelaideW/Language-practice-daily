@@ -112,7 +112,7 @@ function currentTarget() {
 function currentCode() {
   const t = currentTarget()
   if (!t) return ''
-  if (t.kind === 'punct') return t.expected || punctTypingKey(t.char)
+  if (t.kind === 'punct' || t.kind === 'space') return t.expected || punctTypingKey(t.char)
   return encode(settings.scheme, t.pinyin)
 }
 
@@ -689,8 +689,8 @@ function patchPinyinLine() {
     line.textContent = ''
     return
   }
-  if (t.kind === 'punct') {
-    line.textContent = `${t.char} · ${currentCode()}`
+  if (t.kind === 'punct' || t.kind === 'space') {
+    line.textContent = t.kind === 'space' ? `space` : `${t.char} · ${currentCode()}`
     return
   }
   line.textContent = `${t.pinyin} · ${encode(settings.scheme, t.pinyin)}`
@@ -699,7 +699,10 @@ function patchPinyinLine() {
 function patchKeyboardHints() {
   const t = currentTarget()
   const code = currentCode()
-  const punctKey = t?.kind === 'punct' ? code : ''
+  const punctKey =
+    (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
+      ? code
+      : ''
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
   const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
@@ -840,12 +843,12 @@ function handleKey(key) {
   const code = currentCode()
   if (!code) return
 
-  if (target.kind === 'punct') {
-    if (key.length !== 1) return
+  if (target.kind === 'punct' || target.kind === 'space') {
+    if (key.length !== 1 && !(code === ' ' && key === ' ')) return
     noteActivity()
     state.keystrokes += 1
     if (key === code) onCorrectSyllable()
-    else onWrongKey(key)
+    else onWrongKey(key === ' ' ? 'space' : key)
     return
   }
 
@@ -1127,7 +1130,10 @@ function renderKeyboard() {
   const layout = getLayout(settings.scheme)
   const t = currentTarget()
   const code = currentCode()
-  const punctKey = t?.kind === 'punct' && settings.showHints && !state.sessionFinished ? code : ''
+  const punctKey =
+    (t?.kind === 'punct' || t?.kind === 'space') && settings.showHints && !state.sessionFinished
+      ? code
+      : ''
   const initKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[0] : ''
   const finalKey = !punctKey && settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
@@ -1171,6 +1177,16 @@ function renderKeyboard() {
     </div>
   `
 
+  const spaceRow = `
+    <div class="kb-row">
+      <div class="key key-wide key-punct ${punctKey === ' ' ? 'hint' : ''}" data-key=" ">
+        <span class="k-init"></span>
+        <span class="k-main">space</span>
+        <span class="k-final"></span>
+      </div>
+    </div>
+  `
+
   return `
     <div class="keyboard-wrap">
       <div class="legend">
@@ -1180,6 +1196,7 @@ function renderKeyboard() {
       <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
         ${rows}
         ${punctRow}
+        ${spaceRow}
       </div>
     </div>
   `
@@ -1354,7 +1371,7 @@ function render() {
       <section class="practice-card enter" id="practice-card" tabindex="0">
         ${stage}
         <div class="hints-row hints-row-bottom">
-          <span><kbd>Space</kbd> 朗读</span>
+          <span><kbd>朗读</kbd> 按钮读当前字</span>
           <span><kbd>Esc</kbd> 清空当前输入</span>
           <span><kbd>⌥R</kbd> 重练 · <kbd>⌥N</kbd> 下一篇</span>
         </div>
@@ -1590,11 +1607,6 @@ function bindEvents() {
       patchLive()
       return
     }
-    if (e.key === ' ' || e.code === 'Space') {
-      e.preventDefault()
-      speakCurrent()
-      return
-    }
     if (e.key === 'Backspace') {
       e.preventDefault()
       state.buffer = state.buffer.slice(0, -1)
@@ -1632,12 +1644,7 @@ export function bootShuangpin(root) {
       return
     }
     if (state.drawer) return
-    if (e.key === ' ' || e.code === 'Space') {
-      e.preventDefault()
-      speakCurrent()
-      return
-    }
-    if (e.key.length === 1 && /^[a-zA-Z;.,!?:'"/\-]$/.test(e.key)) {
+    if (e.key.length === 1 && /^[a-zA-Z;.,!?:'"/\- ]$/.test(e.key)) {
       e.preventDefault()
       handleKey(e.key)
     }

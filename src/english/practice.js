@@ -25,7 +25,7 @@ import {
 } from './mistakes.js'
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
-import { isTypablePunct, punctTypingKey } from '../punct.js'
+import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -43,6 +43,7 @@ const QWERTY = [
   ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
   ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', "'"],
   ['z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '?', '!'],
+  [' '],
 ]
 
 function loadMode() {
@@ -147,6 +148,7 @@ export function bootEnglish(root) {
   }
 
   function matchesExpected(typed, expected) {
+    if (isTypableSpace(expected) || expected === ' ') return typed === ' '
     if (isTypablePunct(expected)) return typed === punctTypingKey(expected)
     if (settings.caseSensitive) return typed === expected
     return typed.toLowerCase() === expected.toLowerCase()
@@ -671,7 +673,7 @@ export function bootEnglish(root) {
     const t = currentTarget()
     if (!t) return ''
     const ch = t.char
-    if (ch === ' ') return ' '
+    if (isTypableSpace(ch) || ch === ' ') return ' '
     if (isTypablePunct(ch)) return punctTypingKey(ch)
     return ch.toLowerCase()
   }
@@ -923,7 +925,7 @@ export function bootEnglish(root) {
           <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
         </div>
         <div class="drawer-body">
-          <p class="drawer-lead">These settings apply only to English practice. Article length counts letters/digits (spaces skipped).</p>
+          <p class="drawer-lead">These settings apply only to English practice. Article length counts letters/digits (spaces & punctuation don't add to the count).</p>
           <section class="drawer-section">
             <h3>Practice</h3>
             <label class="opt-row">
@@ -1059,7 +1061,7 @@ export function bootEnglish(root) {
         <section class="practice-card enter" id="practice-card" tabindex="0">
           ${renderStage()}
           <div class="hints-row hints-row-bottom">
-            <span>Type letters & punctuation · spaces are skipped</span>
+            <span>Type letters, punctuation & spaces</span>
             <span><kbd>Esc</kbd> clear error flash</span>
             <span><kbd>⌥R</kbd> retry · <kbd>⌥N</kbd> next</span>
           </div>

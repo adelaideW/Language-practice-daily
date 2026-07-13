@@ -426,7 +426,7 @@ export const ARTICLES = [
   ),
 ]
 
-/** Build typed units from text + parallel pinyin array (null = punctuation → typable key). */
+/** Build typed units from text + parallel pinyin array (null = punctuation/space → typable key). */
 export function buildUnits(text, pinyinList) {
   const units = []
   for (let i = 0; i < text.length; i++) {
@@ -437,7 +437,13 @@ export function buildUnits(text, pinyinList) {
     } else {
       const key = punctTypingKey(ch)
       if (key) {
-        units.push({ char: ch, pinyin: null, expected: key, index: i, kind: 'punct' })
+        units.push({
+          char: ch,
+          pinyin: null,
+          expected: key,
+          index: i,
+          kind: key === ' ' ? 'space' : 'punct',
+        })
       }
     }
   }

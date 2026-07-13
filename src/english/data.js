@@ -3,7 +3,7 @@
  * Typing includes punctuation; length metrics still count letters/digits only.
  */
 
-import { isTypablePunct } from '../punct.js'
+import { isTypablePunct, isTypableSpace } from '../punct.js'
 
 /** @typedef {{ title: string, text: string }} Passage */
 
@@ -89,13 +89,13 @@ export function isEnglishLetterOrDigit(ch) {
   return /[A-Za-z0-9]/.test(ch)
 }
 
-/** Typable practice keys: letters, digits, punctuation (spaces skipped). */
+/** Typable practice keys: letters, digits, punctuation, and spaces. */
 export function isEnglishTypeChar(ch) {
-  return isEnglishLetterOrDigit(ch) || isTypablePunct(ch)
+  return isEnglishLetterOrDigit(ch) || isTypablePunct(ch) || isTypableSpace(ch)
 }
 
 /**
- * Build typing units: letters/digits/punctuation (spaces skipped).
+ * Build typing units: letters/digits/punctuation/spaces (newlines skipped).
  * @param {string} text
  * @returns {{ char: string, index: number }[]}
  */

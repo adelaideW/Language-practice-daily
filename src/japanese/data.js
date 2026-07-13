@@ -185,7 +185,7 @@ export const JP_ARTICLES = [
 
 /**
  * @param {JpPassage} passage
- * @returns {{ surface: string, kana: string | null, expectedKey?: string, index: number, spanStart: number, spanEnd: number, kind: 'kana' | 'punct' }[]}
+ * @returns {{ surface: string, kana: string | null, expectedKey?: string, index: number, spanStart: number, spanEnd: number, kind: 'kana' | 'punct' | 'space' }[]}
  */
 export function buildJapaneseUnits(passage) {
   const units = []
@@ -216,7 +216,7 @@ export function buildJapaneseUnits(passage) {
           index: i,
           spanStart,
           spanEnd,
-          kind: 'punct',
+          kind: key === ' ' ? 'space' : 'punct',
         })
       }
     }
