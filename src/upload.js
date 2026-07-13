@@ -73,7 +73,7 @@ async function extractPdf(file, requireHanzi = true) {
   if (requireHanzi && !/[\u4e00-\u9fff]/.test(text)) {
     throw new Error('PDF 中未提取到汉字（扫描版请用图片 OCR 上传）')
   }
-  if (!requireHanzi && !/[A-Za-z]/.test(text)) {
+  if (!requireHanzi && !/[A-Za-z\u3040-\u30ff\u4e00-\u9fff]/.test(text)) {
     throw new Error('No extractable text found in PDF')
   }
   return text
@@ -100,7 +100,9 @@ async function extractEpub(file, requireHanzi = true) {
   }
   const text = chunks.join('\n')
   if (requireHanzi && !/[\u4e00-\u9fff]/.test(text)) throw new Error('EPUB 中未找到汉字')
-  if (!requireHanzi && !/[A-Za-z]/.test(text)) throw new Error('No English text found in EPUB')
+  if (!requireHanzi && !/[A-Za-z\u3040-\u30ff\u4e00-\u9fff]/.test(text)) {
+    throw new Error('No English text found in EPUB')
+  }
   return text
 }
 
@@ -116,8 +118,8 @@ async function extractImageOcr(file, ocrLang = 'chi_sim', requireHanzi = true) {
     if (requireHanzi && !/[\u4e00-\u9fff]/.test(cleaned)) {
       throw new Error('图片中未识别到汉字')
     }
-    if (!requireHanzi && !/[A-Za-z]/.test(cleaned)) {
-      throw new Error('No English letters recognized in image')
+    if (!requireHanzi && !/[A-Za-z\u3040-\u30ff\u4e00-\u9fff]/.test(cleaned)) {
+      throw new Error('No text recognized in image')
     }
     return cleaned
   } finally {

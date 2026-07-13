@@ -23,7 +23,6 @@ import {
 } from './pinyinText.js'
 import { extractFromFile } from './upload.js'
 import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
-import { trackSwitchHtml, bindTrackSwitch, switchTrack } from './track.js'
 
 const STORAGE_MODE = 'xiaohe-practice-mode'
 const STORAGE_BEST = 'xiaohe-best-combo'
@@ -88,7 +87,7 @@ const state = {
   drawerJustOpened: false,
 }
 
-const app = document.querySelector('#app')
+let app = document.querySelector('#practice-root') || document.querySelector('#app')
 let tickHandle = null
 let advanceTimer = null
 
@@ -1268,7 +1267,6 @@ function render() {
         <h1>双拼练习</h1>
         <span class="scheme">${getSchemeLabel(settings.scheme)}</span>
       </div>
-      ${trackSwitchHtml('shuangpin')}
       <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
       <div class="top-actions">
         <button type="button" class="ghost-chip" id="btn-open-mistakes">错字本${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
@@ -1320,10 +1318,6 @@ function restartRound() {
 }
 
 function bindEvents() {
-  bindTrackSwitch((t) => {
-    if (t !== 'shuangpin') switchTrack(t)
-  })
-
   document.querySelectorAll('[data-mode]').forEach((btn) => {
     btn.addEventListener('click', () => setMode(btn.dataset.mode))
   })
@@ -1505,8 +1499,11 @@ function bindEvents() {
   focusApp()
 }
 
-/** Boot 双拼 practice (only when this track is active). */
-export function bootShuangpin() {
+/** Boot 双拼 practice (only when this track is active).
+ * @param {HTMLElement} [root]
+ */
+export function bootShuangpin(root) {
+  if (root) app = root
   document.title = '双拼练习'
   document.documentElement.lang = 'zh-CN'
 

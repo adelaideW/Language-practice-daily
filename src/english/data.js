@@ -1,5 +1,6 @@
 /**
  * English practice content — words, sentences, quotes / short essays.
+ * Character counting matches 双拼 rule: only letters/digits count (spaces & punctuation skipped when typing).
  */
 
 /** @typedef {{ title: string, text: string }} Passage */
@@ -81,8 +82,13 @@ export const ENGLISH_ARTICLES = [
   },
 ]
 
+/** Letters & digits only — same role as 汉字 in 双拼. */
+export function isEnglishTypeChar(ch) {
+  return /[A-Za-z0-9]/.test(ch)
+}
+
 /**
- * Build typing units: every character is typed (letters, digits, punctuation, spaces).
+ * Build typing units: skip spaces & punctuation (mirrored after 双拼).
  * @param {string} text
  * @returns {{ char: string, index: number }[]}
  */
@@ -90,7 +96,7 @@ export function buildEnglishUnits(text) {
   const units = []
   const chars = [...text]
   for (let i = 0; i < chars.length; i++) {
-    units.push({ char: chars[i], index: i })
+    if (isEnglishTypeChar(chars[i])) units.push({ char: chars[i], index: i })
   }
   return units
 }
@@ -99,8 +105,8 @@ export function buildEnglishUnits(text) {
  * @param {{ index: number }[]} units
  * @param {number} charsPerPage
  */
-export function buildEnglishPages(units, charsPerPage = 220) {
-  const size = Math.max(40, Math.min(600, Number(charsPerPage) || 220))
+export function buildEnglishPages(units, charsPerPage = 120) {
+  const size = Math.max(20, Math.min(400, Number(charsPerPage) || 120))
   if (!units.length) return [{ start: 0, end: 0 }]
   const pages = []
   for (let i = 0; i < units.length; i += size) {
@@ -116,6 +122,9 @@ export function pageIndexForUnit(pages, unitIndex) {
   return Math.max(0, pages.length - 1)
 }
 
+/** Count typeable characters (letters/digits), like 字数 for Chinese. */
 export function countEnglishChars(text) {
-  return [...String(text || '')].length
+  let n = 0
+  for (const ch of String(text || '')) if (isEnglishTypeChar(ch)) n += 1
+  return n
 }

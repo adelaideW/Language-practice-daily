@@ -24,14 +24,14 @@ const STORAGE_KEY = 'english-settings'
 export const DEFAULT_ENGLISH_SETTINGS = {
   smartPractice: false,
   timerMode: 'auto',
-  keyboardCovered: false,
+  keyboardCovered: true,
   speakOnCorrect: false,
   autoAdvancePerfect: true,
   autoAdvanceWithMistakes: true,
   caseSensitive: true,
   durationMinutes: 5,
   minArticleChars: 40,
-  charsPerPage: 220,
+  charsPerPage: 120,
 }
 
 /** @returns {EnglishSettings} */
@@ -42,8 +42,18 @@ export function loadEnglishSettings() {
     let base = { ...DEFAULT_ENGLISH_SETTINGS }
     if (raw) base = { ...DEFAULT_ENGLISH_SETTINGS, ...JSON.parse(raw) }
     base.minArticleChars = Math.max(1, Math.min(2000, Number(base.minArticleChars) || 40))
-    base.charsPerPage = Math.max(40, Math.min(600, Number(base.charsPerPage) || 220))
+    base.charsPerPage = Math.max(20, Math.min(400, Number(base.charsPerPage) || 120))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
+    // One-time: hide keyboard by default for English
+    if (!localStorage.getItem('english-mig-kb-covered')) {
+      base.keyboardCovered = true
+      localStorage.setItem('english-mig-kb-covered', '1')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+      } catch {
+        /* ignore */
+      }
+    }
     return base
   } catch {
     return { ...DEFAULT_ENGLISH_SETTINGS }

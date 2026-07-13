@@ -1,17 +1,39 @@
 /**
- * Practice track: shuangpin (双拼) vs english.
- * Switching reloads so each track boots in isolation.
+ * Practice track + left language panel shell.
+ * Switching tracks reloads so each language boots in isolation.
  */
 
-const STORAGE_KEY = 'typing-practice-track'
+const STORAGE_TRACK = 'typing-practice-track'
+const STORAGE_PANEL = 'typing-lang-panel-collapsed'
 
-/** @typedef {'shuangpin' | 'english'} PracticeTrack */
+/** @typedef {'shuangpin' | 'english' | 'japanese'} PracticeTrack */
+
+export const TRACKS = [
+  {
+    id: 'shuangpin',
+    label: '双拼',
+    sub: '中文 · 小鹤 / 自然码 / 搜狗',
+    short: '拼',
+  },
+  {
+    id: 'english',
+    label: 'English',
+    sub: 'QWERTY · words & passages',
+    short: 'En',
+  },
+  {
+    id: 'japanese',
+    label: '日本語',
+    sub: 'Romaji · ひらがなヒント',
+    short: '日',
+  },
+]
 
 /** @returns {PracticeTrack} */
 export function loadTrack() {
   try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    if (v === 'english' || v === 'shuangpin') return v
+    const v = localStorage.getItem(STORAGE_TRACK)
+    if (v === 'english' || v === 'shuangpin' || v === 'japanese') return v
   } catch {
     /* ignore */
   }
@@ -20,37 +42,97 @@ export function loadTrack() {
 
 /** @param {PracticeTrack} track */
 export function saveTrack(track) {
-  localStorage.setItem(STORAGE_KEY, track)
+  localStorage.setItem(STORAGE_TRACK, track)
 }
 
-/**
- * Persist track and reload so timers / listeners / DOM fully reset.
- * @param {PracticeTrack} track
- */
+/** @param {PracticeTrack} track */
 export function switchTrack(track) {
   saveTrack(track)
   location.reload()
 }
 
-/**
- * Shared track switch markup for both apps.
- * @param {PracticeTrack} active
- */
-export function trackSwitchHtml(active) {
-  return `
-    <div class="track-switch" role="tablist" aria-label="Practice language">
-      <button type="button" role="tab" data-track="shuangpin" class="${active === 'shuangpin' ? 'active' : ''}" aria-selected="${active === 'shuangpin'}">双拼</button>
-      <button type="button" role="tab" data-track="english" class="${active === 'english' ? 'active' : ''}" aria-selected="${active === 'english'}">English</button>
-    </div>
-  `
+export function loadPanelCollapsed() {
+  try {
+    return localStorage.getItem(STORAGE_PANEL) === '1'
+  } catch {
+    return false
+  }
 }
 
-/** @param {(track: PracticeTrack) => void} onSwitch */
-export function bindTrackSwitch(onSwitch) {
+/** @param {boolean} collapsed */
+export function savePanelCollapsed(collapsed) {
+  localStorage.setItem(STORAGE_PANEL, collapsed ? '1' : '0')
+}
+
+/**
+ * Mount left language panel + practice host inside #app.
+ * @param {HTMLElement} app
+ * @param {PracticeTrack} active
+ * @returns {HTMLElement} practice root
+ */
+export function mountLanguageShell(app, active) {
+  const collapsed = loadPanelCollapsed()
+  const items = TRACKS.map((t) => {
+    const isActive = t.id === active
+    return `
+      <button
+        type="button"
+        class="lang-item ${isActive ? 'active' : ''}"
+        data-track="${t.id}"
+        role="tab"
+        aria-selected="${isActive}"
+        title="${t.label}"
+      >
+        <span class="lang-short" aria-hidden="true">${t.short}</span>
+        <span class="lang-copy">
+          <span class="lang-label">${t.label}</span>
+          <span class="lang-sub">${t.sub}</span>
+        </span>
+      </button>
+    `
+  }).join('')
+
+  app.innerHTML = `
+    <div class="app-shell ${collapsed ? 'is-collapsed' : ''}">
+      <aside class="lang-panel" aria-label="Language">
+        <div class="lang-panel-head">
+          <div class="lang-panel-titles">
+            <p class="lang-panel-kicker">Practice</p>
+            <p class="lang-panel-title">Language</p>
+          </div>
+          <button type="button" class="lang-collapse" id="btn-lang-collapse" aria-expanded="${!collapsed}" aria-label="${collapsed ? 'Expand language panel' : 'Collapse language panel'}">
+            <span class="lang-collapse-icon" aria-hidden="true">${collapsed ? '»' : '«'}</span>
+          </button>
+        </div>
+        <nav class="lang-list" role="tablist">${items}</nav>
+        <p class="lang-panel-note">Each language keeps its own settings & history.</p>
+      </aside>
+      <div class="app-content" id="practice-root"></div>
+    </div>
+  `
+
+  document.querySelector('#btn-lang-collapse')?.addEventListener('click', () => {
+    const shell = document.querySelector('.app-shell')
+    if (!shell) return
+    const next = !shell.classList.contains('is-collapsed')
+    shell.classList.toggle('is-collapsed', next)
+    savePanelCollapsed(next)
+    const btn = document.querySelector('#btn-lang-collapse')
+    if (btn) {
+      btn.setAttribute('aria-expanded', String(!next))
+      btn.setAttribute('aria-label', next ? 'Expand language panel' : 'Collapse language panel')
+      const icon = btn.querySelector('.lang-collapse-icon')
+      if (icon) icon.textContent = next ? '»' : '«'
+    }
+  })
+
   document.querySelectorAll('[data-track]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const t = btn.getAttribute('data-track')
-      if (t === 'english' || t === 'shuangpin') onSwitch(t)
+      const t = /** @type {PracticeTrack | null} */ (btn.getAttribute('data-track'))
+      if (!t || t === active) return
+      if (t === 'english' || t === 'shuangpin' || t === 'japanese') switchTrack(t)
     })
   })
+
+  return /** @type {HTMLElement} */ (document.querySelector('#practice-root'))
 }

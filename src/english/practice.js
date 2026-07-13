@@ -25,7 +25,6 @@ import {
 } from './mistakes.js'
 import { loadEnglishLibrary, addEnglishDoc, removeEnglishDoc } from './library.js'
 import { extractFromFile } from '../upload.js'
-import { trackSwitchHtml, bindTrackSwitch, switchTrack } from '../track.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -93,9 +92,9 @@ function formatAgo(ts) {
 }
 
 /**
- * @param {HTMLElement} app
+ * @param {HTMLElement} root
  */
-export function bootEnglish(app) {
+export function bootEnglish(root) {
   let settings = loadEnglishSettings()
 
   const state = {
@@ -913,7 +912,7 @@ export function bootEnglish(app) {
           <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
         </div>
         <div class="drawer-body">
-          <p class="drawer-lead">These settings apply only to English practice.</p>
+          <p class="drawer-lead">These settings apply only to English practice. Character counts ignore spaces & punctuation (same idea as Chinese 字数).</p>
           <section class="drawer-section">
             <h3>Practice</h3>
             <label class="opt-row">
@@ -943,12 +942,12 @@ export function bootEnglish(app) {
           <section class="drawer-section">
             <h3>Articles</h3>
             <label class="opt-row stacked">
-              <span>Minimum characters</span>
+              <span>Minimum characters (letters/digits only)</span>
               <input type="number" id="set-min-chars" min="1" max="2000" value="${settings.minArticleChars}" />
             </label>
             <label class="opt-row stacked">
-              <span>Characters per page</span>
-              <input type="number" id="set-page-chars" min="40" max="600" value="${settings.charsPerPage}" />
+              <span>Characters per page (letters/digits)</span>
+              <input type="number" id="set-page-chars" min="20" max="400" value="${settings.charsPerPage}" />
             </label>
             <label class="opt-row">
               <span class="ghost-chip upload-chip">
@@ -1009,13 +1008,12 @@ export function bootEnglish(app) {
 
     const mistakeCount = loadEnglishMistakes().length
 
-    app.innerHTML = `
+    root.innerHTML = `
       <header class="topbar">
         <div class="brand">
           <h1>English typing</h1>
           <span class="scheme">QWERTY</span>
         </div>
-        ${trackSwitchHtml('english')}
         <nav class="mode-tabs" aria-label="Practice mode">${modeButtons}</nav>
         <div class="top-actions">
           <button type="button" class="ghost-chip" id="btn-open-mistakes">Mistakes${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
@@ -1028,9 +1026,8 @@ export function bootEnglish(app) {
         <section class="practice-card enter" id="practice-card" tabindex="0">
           ${renderStage()}
           <div class="hints-row hints-row-bottom">
-            <span>Type each letter · spaces and punctuation count</span>
+            <span>Type letters only · spaces & punctuation are skipped</span>
             <span><kbd>Esc</kbd> clear error flash</span>
-            <span>Settings & mistakes stay separate from 双拼</span>
           </div>
           <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
         </section>
@@ -1063,10 +1060,6 @@ export function bootEnglish(app) {
   }
 
   function bindEvents() {
-    bindTrackSwitch((t) => {
-      if (t !== 'english') switchTrack(t)
-    })
-
     document.querySelectorAll('[data-mode]').forEach((btn) => {
       btn.addEventListener('click', () => setMode(btn.dataset.mode))
     })
@@ -1168,7 +1161,7 @@ export function bootEnglish(app) {
     })
     document.querySelector('#set-page-chars')?.addEventListener('change', (e) => {
       applySettingsPatch({
-        charsPerPage: Math.max(40, Math.min(600, Number(e.target.value) || 220)),
+        charsPerPage: Math.max(20, Math.min(400, Number(e.target.value) || 120)),
       })
     })
     document.querySelector('#set-cover')?.addEventListener('change', (e) => {
