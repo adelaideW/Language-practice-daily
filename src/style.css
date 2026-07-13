@@ -18,6 +18,10 @@
   --font-display: 'Fraunces', 'Noto Sans SC', serif;
   --font-body: 'Noto Sans SC', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --btn-hover-bg: #e8eaed;
+  --btn-hover-border: rgba(26, 35, 50, 0.18);
+  --btn-height: 2rem;
+  --btn-pad-x: 0.9rem;
 }
 
 *,
@@ -95,6 +99,150 @@ body::before {
   background: var(--jade-soft);
 }
 
+/* ——— Button system ———
+   Types: primary (solid jade), secondary (outlined), warning, icon, chip
+   Hover never changes size, padding, or border-width — only colors.
+*/
+.btn,
+.dur-btn,
+.icon-btn,
+.toolbar button,
+.ghost-btn,
+.timer-right > button,
+.timer-actions > button,
+.drawer-foot button,
+.nav-icon,
+.ghost-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0;
+  line-height: 1;
+  vertical-align: middle;
+  font-family: var(--font-body);
+  font-weight: 500;
+  white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border-width: 1px;
+  border-style: solid;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+/* Secondary (default outlined) */
+.btn-secondary,
+.dur-btn,
+.toolbar button,
+.ghost-btn,
+.timer-right > button:not(.primary):not(.icon-btn),
+.timer-actions > button:not(.primary):not(.icon-btn):not(.icon-btn-danger),
+.drawer-foot button:not(.primary),
+.ghost-chip {
+  height: var(--btn-height);
+  padding: 0 var(--btn-pad-x);
+  border-radius: 999px;
+  border-color: var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.btn-secondary:hover,
+.dur-btn:hover:not(:disabled):not(.active),
+.toolbar button:hover:not(.primary),
+.ghost-btn:hover,
+.timer-right > button:not(.primary):not(.icon-btn):hover,
+.drawer-foot button:not(.primary):hover,
+.ghost-chip:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--ink);
+}
+
+/* Primary (solid green) */
+.btn-primary,
+.toolbar button.primary,
+.timer-right .primary,
+.drawer-foot .primary,
+.dur-btn.active {
+  height: var(--btn-height);
+  padding: 0 var(--btn-pad-x);
+  border-radius: 999px;
+  background: var(--jade);
+  border-color: var(--jade);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.btn-primary:hover,
+.toolbar button.primary:hover,
+.timer-right .primary:hover,
+.drawer-foot .primary:hover,
+.dur-btn.active:hover:not(:disabled) {
+  background: var(--jade-deep);
+  border-color: var(--jade-deep);
+  color: #fff;
+}
+
+/* Warning */
+.btn-warning {
+  border-color: var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+}
+
+.btn-warning:hover {
+  background: var(--coral-soft);
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+/* Icon */
+.icon-btn,
+.nav-icon {
+  width: var(--btn-height);
+  height: var(--btn-height);
+  padding: 0;
+  border-radius: 9px;
+  border-color: var(--line);
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+}
+
+.icon-btn:hover,
+.nav-icon:hover:not(:disabled) {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--ink);
+}
+
+.icon-btn-danger:hover {
+  background: var(--coral-soft);
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.nav-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Duration chips */
+.dur-btn {
+  height: 1.85rem;
+  padding: 0 0.7rem;
+  font-size: 0.8rem;
+}
+
+.dur-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .mode-tabs {
   display: flex;
   gap: 0.35rem;
@@ -107,20 +255,27 @@ body::before {
 
 .mode-tabs button {
   appearance: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
   color: var(--ink-soft);
   font-family: var(--font-body);
   font-size: 0.88rem;
   font-weight: 500;
-  padding: 0.45rem 0.95rem;
+  line-height: 1;
+  height: 2rem;
+  padding: 0 0.95rem;
   border-radius: 999px;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, transform 0.15s;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.mode-tabs button:hover {
+.mode-tabs button:hover:not(.active) {
   color: var(--ink);
+  background: var(--btn-hover-bg);
 }
 
 .mode-tabs button.active {
@@ -129,7 +284,7 @@ body::before {
 }
 
 .mode-tabs button:active {
-  transform: scale(0.97);
+  transform: none;
 }
 
 .timer-bar {
@@ -139,7 +294,7 @@ body::before {
   justify-content: space-between;
   gap: 0.75rem 1rem;
   max-width: 1100px;
-  width: 100%;
+  width: calc(100% - 3rem);
   margin: 0.65rem auto 0;
   padding: 0.75rem 1rem;
   background: var(--surface);
@@ -147,10 +302,6 @@ body::before {
   border-radius: 16px;
   backdrop-filter: blur(10px);
   box-sizing: border-box;
-  margin-left: auto;
-  margin-right: auto;
-  width: calc(100% - 3rem);
-  max-width: 1072px;
 }
 
 .timer-left {
@@ -191,39 +342,11 @@ body::before {
   gap: 0.3rem;
 }
 
-.dur-btn {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 0.8rem;
-  font-weight: 500;
-  padding: 0.35rem 0.65rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.dur-btn:hover:not(:disabled) {
-  border-color: var(--jade);
-  color: var(--jade-deep);
-}
-
-.dur-btn.active {
-  background: var(--jade);
-  border-color: var(--jade);
-  color: #fff;
-}
-
-.dur-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
 .custom-dur {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.25rem;
   height: 1.85rem;
   padding: 0 0.55rem 0 0.35rem;
@@ -231,6 +354,7 @@ body::before {
   border-radius: 999px;
   background: var(--surface-solid);
   font-size: 0.78rem;
+  line-height: 1;
   color: var(--muted);
 }
 
@@ -238,9 +362,10 @@ body::before {
   width: 2.4rem;
   border: 0;
   outline: none;
-  padding: 0.2rem 0.15rem;
+  padding: 0;
   font-family: var(--font-mono);
   font-size: 0.82rem;
+  line-height: 1;
   background: transparent;
   color: var(--ink);
   text-align: center;
@@ -252,66 +377,6 @@ body::before {
 
 .custom-dur:has(input:disabled) {
   opacity: 0.45;
-}
-
-.icon-btn {
-  appearance: none;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border-radius: 9px;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
-  color: var(--ink-soft);
-  display: inline-grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.icon-btn:hover {
-  border-color: rgba(26, 35, 50, 0.16);
-  color: var(--ink);
-  background: #e8eaed;
-}
-
-.icon-btn-danger:hover {
-  border-color: var(--coral);
-  color: var(--coral);
-  background: var(--coral-soft);
-}
-
-.timer-right .primary,
-.timer-right button:not(.icon-btn) {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.timer-right button:not(.icon-btn):not(.primary):hover {
-  background: #e8eaed;
-  border-color: rgba(26, 35, 50, 0.16);
-  color: var(--ink);
-}
-
-.timer-right .primary {
-  background: var(--jade);
-  border-color: var(--jade);
-  color: #fff;
-}
-
-.timer-right .primary:hover {
-  background: var(--jade-deep);
-  border-color: var(--jade-deep);
-  color: #fff;
 }
 
 .timer-value {
@@ -634,40 +699,6 @@ body::before {
   justify-content: center;
 }
 
-.toolbar button,
-.ghost-btn {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 0.5rem 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.toolbar button:hover,
-.ghost-btn:hover {
-  background: #e8eaed;
-  border-color: rgba(26, 35, 50, 0.16);
-  color: var(--ink);
-}
-
-.toolbar button.primary {
-  background: var(--jade);
-  border-color: var(--jade);
-  color: #fff;
-}
-
-.toolbar button.primary:hover {
-  background: var(--jade-deep);
-  border-color: var(--jade-deep);
-  color: #fff;
-}
-
 .keyboard-wrap {
   width: 100%;
   display: flex;
@@ -857,22 +888,10 @@ body::before {
 }
 
 .ghost-chip {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
   font-size: 0.82rem;
-  font-weight: 500;
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  cursor: pointer;
+  height: 1.9rem;
+  padding: 0 0.75rem;
   backdrop-filter: blur(8px);
-}
-
-.ghost-chip:hover {
-  color: var(--ink);
-  border-color: var(--jade);
 }
 
 .passage-title-row {
@@ -889,24 +908,7 @@ body::before {
 }
 
 .nav-icon {
-  appearance: none;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--paper-2);
-  color: var(--ink);
   font-size: 1.25rem;
-  line-height: 1;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
-}
-
-.nav-icon:hover:not(:disabled) {
-  border-color: var(--jade);
-  color: var(--jade-deep);
 }
 
 .nav-icon:disabled {
@@ -1005,38 +1007,6 @@ body::before {
   gap: 0.5rem;
   padding: 0.9rem 1.2rem 1.2rem;
   border-top: 1px solid var(--line);
-}
-
-.drawer-foot button {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 0.88rem;
-  font-weight: 500;
-  padding: 0.55rem 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.drawer-foot button:hover {
-  background: #e8eaed;
-  border-color: rgba(26, 35, 50, 0.16);
-  color: var(--ink);
-}
-
-.drawer-foot .primary {
-  background: var(--jade);
-  border-color: var(--jade);
-  color: #fff;
-}
-
-.drawer-foot .primary:hover {
-  background: var(--jade-deep);
-  border-color: var(--jade-deep);
-  color: #fff;
 }
 
 .opt-row {
