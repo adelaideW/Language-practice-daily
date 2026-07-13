@@ -25,7 +25,7 @@ const MODES = [
   { id: 'article', label: '文章练习' },
 ]
 
-const DURATION_PRESETS = [1, 3, 5, 10]
+const DURATION_PRESETS = [3, 5, 10, 15]
 
 function loadMode() {
   const saved = localStorage.getItem(STORAGE_MODE)
@@ -282,20 +282,25 @@ function timerRightHtml() {
     status = `<span class="timer-value idle" id="timer-value">${formatTime(state.durationMinutes * 60 * 1000)}</span>`
   }
 
+  const iconPause = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>`
+  const iconPlay = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7L8 5z"/></svg>`
+  const iconReset = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.2"/><path d="M21 3v7h-7"/></svg>`
+  const iconEnd = `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>`
+
   let actions = ''
   if (state.sessionFinished) {
     actions = `<button type="button" class="primary" id="btn-restart-timer">再练一轮</button>`
   } else if (state.sessionActive) {
     actions = `
-      <button type="button" id="btn-pause-timer">${state.sessionPaused ? '继续' : '暂停'}</button>
-      <button type="button" id="btn-reset-timer">重置</button>
-      <button type="button" id="btn-end-timer">结束</button>
+      <button type="button" class="icon-btn" id="btn-pause-timer" title="${state.sessionPaused ? '继续' : '暂停'}" aria-label="${state.sessionPaused ? '继续' : '暂停'}">${state.sessionPaused ? iconPlay : iconPause}</button>
+      <button type="button" class="icon-btn" id="btn-reset-timer" title="重置" aria-label="重置">${iconReset}</button>
+      <button type="button" class="icon-btn icon-btn-danger" id="btn-end-timer" title="结束" aria-label="结束">${iconEnd}</button>
     `
   } else {
     actions = `<button type="button" class="primary" id="btn-start-timer">开始计时</button>`
   }
 
-  return `${status}${actions}`
+  return `${status}<div class="timer-actions">${actions}</div>`
 }
 
 function bindTimerButtons() {
@@ -887,11 +892,13 @@ function renderTimerBar() {
     <div class="timer-bar">
       <div class="timer-left">
         <span class="timer-label">练习时长</span>
-        <div class="dur-group">${presets}</div>
-        <label class="custom-dur">
-          <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} />
-          <span>分钟</span>
-        </label>
+        <div class="dur-group">
+          ${presets}
+          <label class="custom-dur" title="自定义分钟">
+            <input type="number" id="custom-duration" min="1" max="60" value="${state.durationMinutes}" ${state.sessionActive ? 'disabled' : ''} aria-label="自定义分钟" />
+            <span>分</span>
+          </label>
+        </div>
       </div>
       <div class="timer-right">
         ${timerRightHtml()}
