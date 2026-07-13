@@ -213,7 +213,20 @@ function setDuration(mins) {
 }
 
 function ensureSession() {
-  if (!state.sessionActive && !state.sessionFinished) startSession()
+  if (state.sessionActive || state.sessionFinished) return
+  startSession()
+  const right = document.querySelector('.timer-right')
+  if (right) {
+    right.innerHTML = `
+      <span class="timer-value" id="timer-value">${formatTime(state.remainingMs)}</span>
+      <button type="button" id="btn-end-timer">结束</button>
+    `
+    document.querySelector('#btn-end-timer')?.addEventListener('click', () => endSession())
+  }
+  document.querySelectorAll('[data-duration], #custom-duration').forEach((el) => {
+    el.disabled = true
+  })
+  document.querySelectorAll('.dur-btn').forEach((el) => el.classList.remove('active'))
 }
 
 function onPassageComplete() {
@@ -240,6 +253,108 @@ function onPassageComplete() {
   render()
 }
 
+function patchStats() {
+  const values = document.querySelectorAll('.stat .value')
+  if (values.length < 6) return
+  values[0].textContent = String(state.correct)
+  values[1].textContent = String(state.combo)
+  values[2].textContent = String(state.best)
+  values[3].textContent = `${accuracy()}%`
+  values[4].textContent = String(state.startedAt ? cpm() : 0)
+  values[5].textContent = String(state.startedAt ? kpm() : 0)
+}
+
+function patchCodeSlots() {
+  const progress = document.querySelector('.code-progress')
+  const code = currentCode()
+  if (!progress || !code) return
+  const slots = progress.querySelectorAll('.code-slot')
+  if (slots.length !== code.length) {
+    progress.innerHTML = [...code]
+      .map((_, i) => {
+        const filled = i < state.buffer.length
+        return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+      })
+      .join('')
+    return
+  }
+  slots.forEach((slot, i) => {
+    const filled = i < state.buffer.length
+    slot.classList.toggle('filled', filled)
+    slot.textContent = filled ? state.buffer[i] : ''
+  })
+}
+
+function patchPinyinLine() {
+  const line = document.querySelector('.pinyin-line')
+  if (!line) return
+  const t = currentTarget()
+  if (!t) {
+    line.textContent = ''
+    return
+  }
+  line.textContent = `${t.pinyin} · ${toXiaohe(t.pinyin)}`
+}
+
+function patchKeyboardHints() {
+  const code = currentCode()
+  const initKey = state.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = state.showHints && code && !state.sessionFinished ? code[1] : ''
+  const typedLen = state.buffer.length
+  document.querySelectorAll('.key[data-key]').forEach((el) => {
+    const keyId = el.dataset.key
+    el.classList.toggle('hint-initial', Boolean(initKey && keyId === initKey && typedLen === 0))
+    el.classList.toggle('hint-final', Boolean(finalKey && keyId === finalKey && typedLen === 1))
+  })
+}
+
+function patchPassageCursor() {
+  const passage = document.querySelector('.passage')
+  if (!passage || !state.passage) return
+
+  const currentUnit = state.units[state.unitIndex]
+  const currentIndex = currentUnit?.index ?? -1
+  const doneIndexes = new Set(
+    state.units.slice(0, state.unitIndex).map((u) => u.index),
+  )
+
+  passage.querySelectorAll('.ch').forEach((el, i) => {
+    el.classList.toggle('done', doneIndexes.has(i))
+    el.classList.toggle('current', i === currentIndex)
+  })
+
+  const metaRight = document.querySelector('.passage-progress')
+  if (metaRight) {
+    metaRight.textContent = `${state.unitIndex}/${state.units.length}${
+      state.passageWrong ? ` · 错 ${state.passageWrong}` : ''
+    }`
+  }
+}
+
+function patchCharacterView() {
+  const t = state.currentChar
+  if (!t) return
+  const hanzi = document.querySelector('.hanzi')
+  if (hanzi) hanzi.textContent = t.char
+  patchPinyinLine()
+  patchCodeSlots()
+  patchKeyboardHints()
+  patchStats()
+}
+
+/** Soft update while staying on the same passage/character — no full DOM rebuild. */
+function patchLive() {
+  if (state.mode === 'character') {
+    patchCharacterView()
+    return
+  }
+  patchPassageCursor()
+  patchPinyinLine()
+  patchCodeSlots()
+  patchKeyboardHints()
+  patchStats()
+}
+
 function onCorrectSyllable() {
   state.correct += 1
   state.combo += 1
@@ -250,18 +365,8 @@ function onCorrectSyllable() {
   state.buffer = ''
 
   if (state.mode === 'character') {
-    const el = document.querySelector('.hanzi')
-    if (el) {
-      el.classList.remove('correct-flash')
-      void el.offsetWidth
-      el.classList.add('correct-flash')
-    }
-    setTimeout(() => {
-      if (state.sessionFinished) return
-      nextCharacter()
-      render()
-    }, 180)
-    render()
+    nextCharacter()
+    patchLive()
     return
   }
 
@@ -270,7 +375,7 @@ function onCorrectSyllable() {
     onPassageComplete()
     return
   }
-  render()
+  patchLive()
 }
 
 function onWrongKey() {
@@ -278,7 +383,7 @@ function onWrongKey() {
   state.passageWrong += 1
   state.combo = 0
   state.buffer = ''
-  render()
+  patchLive()
 }
 
 function handleKey(key) {
@@ -305,7 +410,7 @@ function handleKey(key) {
 
   state.buffer = nextBuf
   if (state.buffer === code) onCorrectSyllable()
-  else render()
+  else patchLive()
 }
 
 function speakCurrent() {
@@ -500,13 +605,13 @@ function renderPassageStage() {
 
   const code = currentCode()
   return `
-    <div class="char-stage" style="width:100%;align-items:stretch">
+    <div class="char-stage passage-stage">
       <div class="passage-meta">
         <span class="title">${state.passage.title}</span>
-        <span>${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}</span>
+        <span class="passage-progress">${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}</span>
       </div>
       <div class="passage poem">${chars}</div>
-      <div style="display:flex;flex-direction:column;align-items:center;gap:0.6rem;margin-top:1rem">
+      <div class="typing-chrome">
         <div class="pinyin-line">${currentUnit ? `${currentUnit.pinyin} · ${code}` : ''}</div>
         ${renderCodeSlots()}
       </div>
@@ -534,7 +639,7 @@ function render() {
     ${renderTimerBar()}
     ${renderStats()}
     <main class="main">
-      <section class="practice-card" id="practice-card" tabindex="0">
+      <section class="practice-card enter" id="practice-card" tabindex="0">
         <div class="hints-row">
           <span><kbd>Space</kbd> 朗读</span>
           <span><kbd>Esc</kbd> 清空当前输入</span>
@@ -555,6 +660,10 @@ function render() {
   `
 
   bindEvents()
+  // One-shot enter animation only
+  requestAnimationFrame(() => {
+    document.querySelector('.practice-card')?.classList.remove('enter')
+  })
 }
 
 function restartRound() {
@@ -643,8 +752,7 @@ function bindEvents() {
     if (e.key === 'Escape') {
       e.preventDefault()
       state.buffer = ''
-      render()
-      focusApp()
+      patchLive()
       return
     }
     if (e.key === ' ' || e.code === 'Space') {
@@ -655,8 +763,7 @@ function bindEvents() {
     if (e.key === 'Backspace') {
       e.preventDefault()
       state.buffer = state.buffer.slice(0, -1)
-      render()
-      focusApp()
+      patchLive()
       return
     }
     if (e.key.length === 1) {
@@ -677,7 +784,7 @@ window.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') {
     state.buffer = ''
-    render()
+    patchLive()
     return
   }
   if (e.key === ' ' || e.code === 'Space') {
@@ -696,12 +803,7 @@ if (tickHandle) clearInterval(tickHandle)
 tickHandle = setInterval(() => {
   updateTimerDisplay()
   if (!state.startedAt || state.sessionFinished) return
-  const values = document.querySelectorAll('.stat .value')
-  if (values.length >= 6) {
-    values[3].textContent = `${accuracy()}%`
-    values[4].textContent = String(cpm())
-    values[5].textContent = String(kpm())
-  }
+  patchStats()
 }, 250)
 
 if (import.meta.env.DEV) {
