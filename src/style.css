@@ -511,15 +511,11 @@ body::before {
   word-break: break-all;
 }
 
-.passage.poem {
-  max-width: none;
-}
-
 .passage .ch {
   position: relative;
   padding: 0.05em 0.02em;
   border-radius: 4px;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
 }
 
 .passage .ch.done {
