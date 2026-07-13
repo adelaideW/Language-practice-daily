@@ -465,93 +465,100 @@ export function bootSpeaking(root, opts) {
         </header>
 
         <section class="practice-card spk-card">
-          <div class="spk-article${language === 'ja' && settings.speakShowHiragana ? ' has-furigana' : ''}" lang="${language}">${articleBody}</div>
-          <div class="spk-listen">${listenControlsHtml()}</div>
+          <div class="spk-layout">
+            <div class="spk-article-pane">
+              <div class="spk-article${language === 'ja' && settings.speakShowHiragana ? ' has-furigana' : ''}" lang="${language}">${articleBody}</div>
+            </div>
 
-          <div class="spk-practice">
-            <div class="spk-repeat-head">
-              <h2>${
-                t(
-                  'Your turn — repeat the highlighted line',
-                  'ハイライトの文を声に出して繰り返す',
-                  '请跟读高亮句子',
-                )
-              }</h2>
-              <div class="spk-repeat-meta">
+            <aside class="spk-side">
+              <div class="spk-listen">${listenControlsHtml()}</div>
+
+              <div class="spk-practice">
+                <div class="spk-repeat-head">
+                  <h2>${
+                    t(
+                      'Your turn — repeat the highlighted line',
+                      'ハイライトの文を声に出して繰り返す',
+                      '请跟读高亮句子',
+                    )
+                  }</h2>
+                  <div class="spk-repeat-meta">
+                    ${
+                      ttsOk
+                        ? `<button type="button" class="icon-btn" id="spk-line" title="${
+                            t('Hear this line', 'この行を聴く', '听这一句')
+                          }">🔊</button>`
+                        : ''
+                    }
+                    <span class="spk-counter">${state.index + 1} / ${sents.length} ${t('Line', '行', '句')}</span>
+                  </div>
+                </div>
+
                 ${
-                  ttsOk
-                    ? `<button type="button" class="icon-btn" id="spk-line" title="${
-                        t('Hear this line', 'この行を聴く', '听这一句')
-                      }">🔊</button>`
+                  recognizer.supported
+                    ? `<div class="spk-mic-block">
+                        <button type="button" class="spk-mic ${state.listening ? 'is-listening' : ''}" id="spk-mic" aria-pressed="${state.listening}" aria-label="${
+                          state.listening
+                            ? t('Stop recording', '録音を停止', '停止录音')
+                            : t('Start recording', '録音開始', '开始录音')
+                        }">
+                          ${micIconHtml(state.listening)}
+                        </button>
+                        <p class="spk-mic-status">${
+                          state.listening
+                            ? t('Listening… tap to stop', '聞き取り中…タップで停止', '正在听写…点按停止')
+                            : t('Tap to start speaking', 'タップして話す', '点按开始说话')
+                        }</p>
+                        <p class="spk-live" ${state.transcript || state.listening ? '' : 'hidden'}>${escapeHtml(
+                          state.transcript || '…',
+                        )}</p>
+                        <p class="spk-sr-error error-text" ${state.srError ? '' : 'hidden'}>${escapeHtml(
+                          state.srError,
+                        )}</p>
+                      </div>`
+                    : `<div class="spk-manual">
+                        <p class="spk-hint">${
+                          language === 'ja'
+                            ? '音声認識が使えません。話した内容を入力してください（Chrome 推奨）。'
+                            : "Live speech recognition isn't supported here (try Chrome). Type what you said:"
+                        }</p>
+                        <textarea id="spk-manual" rows="3" placeholder="${
+                          t('Type or paste what you said…', '話した内容を入力…', '输入你说的内容…')
+                        }">${escapeHtml(state.manualText)}</textarea>
+                        <button type="button" class="ghost-chip" id="spk-grade-manual" ${
+                          state.grading ? 'disabled' : ''
+                        }>${
+                          state.grading
+                            ? t('Grading…', '採点中…', '评分中…')
+                            : t('Get feedback', 'フィードバック', '获取反馈')
+                        }</button>
+                      </div>`
+                }
+
+                ${state.grading ? `<p class="spk-hint">${t('Grading…', '採点中…', '评分中…')}</p>` : ''}
+                ${state.gradeError ? `<p class="error-text">${escapeHtml(state.gradeError)}</p>` : ''}
+                ${feedbackHtml()}
+
+                <div class="spk-nav">
+                  <button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
+                    ← ${t('Previous', '前の行', '上一句')}
+                  </button>
+                  <button type="button" class="ghost-chip" id="spk-next-line" ${
+                    state.index >= sents.length - 1 ? 'disabled' : ''
+                  }>
+                    ${t('Next line', '次の行', '下一句')} →
+                  </button>
+                </div>
+
+                ${
+                  gradedCount
+                    ? `<p class="spk-avg">${
+                        t('Session average', '平均', '平均分')
+                      }: ${avg.toFixed(1)}/5 · ${gradedCount}/${sents.length}</p>`
                     : ''
                 }
-                <span class="spk-counter">${state.index + 1} / ${sents.length} ${t('Line', '行', '句')}</span>
               </div>
-            </div>
-
-            ${
-              recognizer.supported
-                ? `<div class="spk-mic-block">
-                    <button type="button" class="spk-mic ${state.listening ? 'is-listening' : ''}" id="spk-mic" aria-pressed="${state.listening}" aria-label="${
-                      state.listening
-                        ? t('Stop recording', '録音を停止', '停止录音')
-                        : t('Start recording', '録音開始', '开始录音')
-                    }">
-                      ${micIconHtml(state.listening)}
-                    </button>
-                    <p class="spk-mic-status">${
-                      state.listening
-                        ? t('Listening… tap to stop', '聞き取り中…タップで停止', '正在听写…点按停止')
-                        : t('Tap to start speaking', 'タップして話す', '点按开始说话')
-                    }</p>
-                    <p class="spk-live" ${state.transcript || state.listening ? '' : 'hidden'}>${escapeHtml(
-                      state.transcript || '…',
-                    )}</p>
-                    <p class="spk-sr-error error-text" ${state.srError ? '' : 'hidden'}>${escapeHtml(
-                      state.srError,
-                    )}</p>
-                  </div>`
-                : `<div class="spk-manual">
-                    <p class="spk-hint">${
-                      language === 'ja'
-                        ? '音声認識が使えません。話した内容を入力してください（Chrome 推奨）。'
-                        : "Live speech recognition isn't supported here (try Chrome). Type what you said:"
-                    }</p>
-                    <textarea id="spk-manual" rows="3" placeholder="${
-                      t('Type or paste what you said…', '話した内容を入力…', '输入你说的内容…')
-                    }">${escapeHtml(state.manualText)}</textarea>
-                    <button type="button" class="ghost-chip" id="spk-grade-manual" ${
-                      state.grading ? 'disabled' : ''
-                    }>${
-                      state.grading
-                        ? t('Grading…', '採点中…', '评分中…')
-                        : t('Get feedback', 'フィードバック', '获取反馈')
-                    }</button>
-                  </div>`
-            }
-
-            ${state.grading ? `<p class="spk-hint">${t('Grading…', '採点中…', '评分中…')}</p>` : ''}
-            ${state.gradeError ? `<p class="error-text">${escapeHtml(state.gradeError)}</p>` : ''}
-            ${feedbackHtml()}
-
-            <div class="spk-nav">
-              <button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
-                ← ${t('Previous', '前の行', '上一句')}
-              </button>
-              <button type="button" class="ghost-chip" id="spk-next-line" ${
-                state.index >= sents.length - 1 ? 'disabled' : ''
-              }>
-                ${t('Next line', '次の行', '下一句')} →
-              </button>
-            </div>
-
-            ${
-              gradedCount
-                ? `<p class="spk-avg">${
-                    t('Session average', '平均', '平均分')
-                  }: ${avg.toFixed(1)}/5 · ${gradedCount}/${sents.length}</p>`
-                : ''
-            }
+            </aside>
           </div>
         </section>
 
@@ -653,6 +660,39 @@ export function bootSpeaking(root, opts) {
     `
 
     bindAll()
+    syncArticlePaneHeight()
+    scrollActiveSentenceIntoView()
+    const side = root.querySelector('.spk-side')
+    if (sideResizeObserver) {
+      sideResizeObserver.disconnect()
+      if (side) sideResizeObserver.observe(side)
+    }
+  }
+
+  function syncArticlePaneHeight() {
+    const side = root.querySelector('.spk-side')
+    const pane = root.querySelector('.spk-article-pane')
+    if (!side || !pane) return
+    // Desktop: article pane hugs the right column (controls + feedback)
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      pane.style.height = ''
+      pane.style.maxHeight = ''
+      return
+    }
+    const h = Math.max(side.offsetHeight, 360)
+    pane.style.height = `${h}px`
+    pane.style.maxHeight = `${h}px`
+  }
+
+  function scrollActiveSentenceIntoView() {
+    const active = root.querySelector('.spk-sent.is-active')
+    const pane = root.querySelector('.spk-article-pane')
+    if (!active || !pane) return
+    const a = active.getBoundingClientRect()
+    const p = pane.getBoundingClientRect()
+    if (a.top < p.top + 8 || a.bottom > p.bottom - 8) {
+      active.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
   }
 
   function bindListen() {
@@ -735,6 +775,7 @@ export function bootSpeaking(root, opts) {
       persistResults()
       const fb = root.querySelector('.spk-feedback')
       fb?.remove()
+      syncArticlePaneHeight()
       recognizer.start()
       patchLive()
     })
@@ -761,6 +802,17 @@ export function bootSpeaking(root, opts) {
     },
     { once: true },
   )
+
+  const sideResizeObserver =
+    typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => {
+          syncArticlePaneHeight()
+        })
+      : null
+
+  window.addEventListener('resize', () => {
+    syncArticlePaneHeight()
+  })
 
   render()
 }
