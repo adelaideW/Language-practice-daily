@@ -1175,8 +1175,8 @@ function renderPassageStage() {
         <h2>${hasMistakes ? '本篇完成' : '全部正确！'}</h2>
         <p>${state.autoAdvanceNote || `准确率 ${accuracy()}% · ${cpm()} 字/分`}</p>
         <div class="toolbar">
-          ${hasMistakes ? `<button type="button" id="btn-redo-passage">重练本篇</button>` : ''}
-          <button type="button" class="primary" id="btn-next-passage">下一篇</button>
+          ${hasMistakes ? `<button type="button" id="btn-redo-passage">重练本篇 <kbd class="btn-kbd">⌥R</kbd></button>` : ''}
+          <button type="button" class="primary" id="btn-next-passage">下一篇 <kbd class="btn-kbd">⌥N</kbd></button>
         </div>
       </div>
     `
@@ -1281,7 +1281,7 @@ function render() {
         <div class="hints-row hints-row-bottom">
           <span><kbd>Space</kbd> 朗读</span>
           <span><kbd>Esc</kbd> 清空当前输入</span>
-          <span>句子/文章完成后可自动下一篇</span>
+          <span><kbd>⌥R</kbd> 重练 · <kbd>⌥N</kbd> 下一篇</span>
         </div>
         <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
       </section>
@@ -1315,6 +1315,24 @@ function restartRound() {
   startSession()
   render()
   focusApp()
+}
+
+function handleCompletionShortcut(e) {
+  if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return false
+  if (!state.completed || state.sessionFinished || state.drawer) return false
+  if (e.code === 'KeyR') {
+    e.preventDefault()
+    e.stopPropagation()
+    redoCurrentPassage()
+    return true
+  }
+  if (e.code === 'KeyN') {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!state.sessionFinished) goNextPassage()
+    return true
+  }
+  return false
 }
 
 function bindEvents() {
@@ -1469,6 +1487,7 @@ function bindEvents() {
   card?.addEventListener('click', focusApp)
   mirror?.addEventListener('keydown', (e) => {
     e.stopPropagation()
+    if (handleCompletionShortcut(e)) return
     if (e.key === 'Escape') {
       e.preventDefault()
       if (state.drawer) {
@@ -1508,6 +1527,7 @@ export function bootShuangpin(root) {
   document.documentElement.lang = 'zh-CN'
 
   window.addEventListener('keydown', (e) => {
+    if (handleCompletionShortcut(e)) return
     const tag = document.activeElement?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA') return
     if (e.key === 'Escape') {

@@ -677,8 +677,8 @@ export function bootJapanese(root) {
         <h2>${hasMistakes ? '完了' : '完璧！'}</h2>
         <p>${state.autoAdvanceNote || `${accuracy()}%`}</p>
         <div class="toolbar">
-          ${hasMistakes ? `<button type="button" id="btn-redo-passage">再挑戦</button>` : ''}
-          <button type="button" class="primary" id="btn-next-passage">次へ</button>
+          ${hasMistakes ? `<button type="button" id="btn-redo-passage">再挑戦 <kbd class="btn-kbd">⌥R</kbd></button>` : ''}
+          <button type="button" class="primary" id="btn-next-passage">次へ <kbd class="btn-kbd">⌥N</kbd></button>
         </div></div>`
     }
 
@@ -918,6 +918,7 @@ export function bootJapanese(root) {
           <div class="hints-row hints-row-bottom">
             <span>ローマ字で入力 · 下に<strong>ひらがな</strong>ヒント</span>
             <span><kbd>Esc</kbd> 入力クリア</span>
+            <span><kbd>⌥R</kbd> 再挑戦 · <kbd>⌥N</kbd> 次へ</span>
           </div>
           <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
         </section>
@@ -943,6 +944,26 @@ export function bootJapanese(root) {
     startSession()
     render()
     focusApp()
+  }
+
+  function handleCompletionShortcut(e) {
+    if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return false
+    if (!state.completed || state.sessionFinished || state.drawer) return false
+    if (e.code === 'KeyR') {
+      e.preventDefault()
+      e.stopPropagation()
+      loadPassageAt(state.passage)
+      render()
+      focusApp()
+      return true
+    }
+    if (e.code === 'KeyN') {
+      e.preventDefault()
+      e.stopPropagation()
+      goNextPassage()
+      return true
+    }
+    return false
   }
 
   function bindEvents() {
@@ -1032,6 +1053,7 @@ export function bootJapanese(root) {
     document.querySelector('#practice-card')?.addEventListener('click', focusApp)
     mirror?.addEventListener('keydown', (e) => {
       e.stopPropagation()
+      if (handleCompletionShortcut(e)) return
       if (e.key === 'Escape') {
         e.preventDefault()
         if (state.drawer) closeDrawer()
@@ -1047,7 +1069,7 @@ export function bootJapanese(root) {
         patchLive()
         return
       }
-      if (e.key.length === 1) {
+      if (e.key.length === 1 && !e.altKey) {
         e.preventDefault()
         handleKey(e.key)
       }
@@ -1056,6 +1078,7 @@ export function bootJapanese(root) {
   }
 
   window.addEventListener('keydown', (e) => {
+    if (handleCompletionShortcut(e)) return
     const tag = document.activeElement?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA') return
     if (e.key === 'Escape') {
@@ -1067,7 +1090,7 @@ export function bootJapanese(root) {
       return
     }
     if (state.drawer) return
-    if (e.key.length === 1 && /^[a-zA-Z]$/.test(e.key) && !e.metaKey && !e.ctrlKey) {
+    if (e.key.length === 1 && /^[a-zA-Z]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault()
       handleKey(e.key)
     }

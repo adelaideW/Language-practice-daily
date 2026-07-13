@@ -785,8 +785,8 @@ export function bootEnglish(root) {
           <h2>${hasMistakes ? 'Passage complete' : 'Perfect!'}</h2>
           <p>${state.autoAdvanceNote || `${accuracy()}% · ${wpm()} WPM`}</p>
           <div class="toolbar">
-            ${hasMistakes ? `<button type="button" id="btn-redo-passage">Retry</button>` : ''}
-            <button type="button" class="primary" id="btn-next-passage">Next</button>
+            ${hasMistakes ? `<button type="button" id="btn-redo-passage">Retry <kbd class="btn-kbd">⌥R</kbd></button>` : ''}
+            <button type="button" class="primary" id="btn-next-passage">Next <kbd class="btn-kbd">⌥N</kbd></button>
           </div>
         </div>
       `
@@ -1028,6 +1028,7 @@ export function bootEnglish(root) {
           <div class="hints-row hints-row-bottom">
             <span>Type letters only · spaces & punctuation are skipped</span>
             <span><kbd>Esc</kbd> clear error flash</span>
+            <span><kbd>⌥R</kbd> retry · <kbd>⌥N</kbd> next</span>
           </div>
           <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
         </section>
@@ -1181,6 +1182,7 @@ export function bootEnglish(root) {
     document.querySelector('#practice-card')?.addEventListener('click', focusApp)
     mirror?.addEventListener('keydown', (e) => {
       e.stopPropagation()
+      if (handleCompletionShortcut(e)) return
       if (e.key === 'Escape') {
         e.preventDefault()
         if (state.drawer) {
@@ -1195,7 +1197,7 @@ export function bootEnglish(root) {
         e.preventDefault()
         return
       }
-      if (e.key.length === 1) {
+      if (e.key.length === 1 && !e.altKey) {
         e.preventDefault()
         handleKey(e.key)
       }
@@ -1204,7 +1206,26 @@ export function bootEnglish(root) {
     focusApp()
   }
 
+  function handleCompletionShortcut(e) {
+    if (!e.altKey || e.metaKey || e.ctrlKey || e.shiftKey) return false
+    if (!state.completed || state.sessionFinished || state.drawer) return false
+    if (e.code === 'KeyR') {
+      e.preventDefault()
+      e.stopPropagation()
+      redoCurrentPassage()
+      return true
+    }
+    if (e.code === 'KeyN') {
+      e.preventDefault()
+      e.stopPropagation()
+      goNextPassage()
+      return true
+    }
+    return false
+  }
+
   window.addEventListener('keydown', (e) => {
+    if (handleCompletionShortcut(e)) return
     const tag = document.activeElement?.tagName
     if (tag === 'INPUT' || tag === 'TEXTAREA') return
     if (e.key === 'Escape') {

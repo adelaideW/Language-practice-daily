@@ -1467,3 +1467,22 @@ body::before {
     padding: 0.55rem 0.25rem;
   }
 }
+
+.complete-banner .btn-kbd {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.08rem 0.35rem;
+  border-radius: 5px;
+  border: 1px solid rgba(26, 35, 50, 0.14);
+  background: rgba(255, 255, 255, 0.55);
+  color: inherit;
+  vertical-align: middle;
+}
+
+.complete-banner .primary .btn-kbd {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+}
