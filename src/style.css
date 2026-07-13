@@ -1424,6 +1424,31 @@ body::before {
   color: var(--muted);
 }
 
+.key-jp {
+  justify-content: space-between;
+  gap: 0.15rem;
+}
+
+.key-jp .k-hira {
+  font-family: 'Noto Sans SC', 'Hiragino Sans', 'Yu Gothic', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--jade);
+  line-height: 1;
+}
+
+.key-jp .k-main {
+  font-size: 0.85rem;
+}
+
+.key-jp.hint .k-hira {
+  color: var(--jade-deep);
+}
+
+.keyboard-jp .key {
+  min-height: clamp(3.2rem, 8.2vw, 4.1rem);
+}
+
 @media (max-width: 720px) {
   .lang-panel {
     width: 72px;

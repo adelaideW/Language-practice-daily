@@ -829,6 +829,35 @@ export function bootJapanese(root) {
   }
 
   function renderKeyboard() {
+    // JIS kana legends on romaji QWERTY (学習用のキー表示)
+    const hiraOnKey = {
+      q: 'た',
+      w: 'て',
+      e: 'い',
+      r: 'す',
+      t: 'か',
+      y: 'ん',
+      u: 'な',
+      i: 'に',
+      o: 'ら',
+      p: 'せ',
+      a: 'ち',
+      s: 'と',
+      d: 'し',
+      f: 'は',
+      g: 'き',
+      h: 'く',
+      j: 'ま',
+      k: 'の',
+      l: 'り',
+      z: 'つ',
+      x: 'さ',
+      c: 'そ',
+      v: 'ひ',
+      b: 'こ',
+      n: 'み',
+      m: 'も',
+    }
     const rows = [
       ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
       ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'],
@@ -839,17 +868,20 @@ export function bootJapanese(root) {
       .map(
         (row) =>
           `<div class="kb-row">${row
-            .map(
-              (k) =>
-                `<button type="button" class="key ${k === nextKey ? 'hint' : ''}" data-key="${k}" tabindex="-1">${k}</button>`,
-            )
+            .map((k) => {
+              const hira = hiraOnKey[k] || ''
+              return `<button type="button" class="key key-jp ${k === nextKey ? 'hint' : ''}" data-key="${k}" tabindex="-1">
+                <span class="k-hira">${hira}</span>
+                <span class="k-main">${k}</span>
+              </button>`
+            })
             .join('')}</div>`,
       )
       .join('')
     return `
       <div class="keyboard-wrap">
         <button type="button" class="ghost-chip" id="kb-toggle">${settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'}</button>
-        <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}">${html}</div>
+        <div class="keyboard keyboard-jp ${settings.keyboardCovered ? 'covered' : ''}">${html}</div>
       </div>`
   }
 

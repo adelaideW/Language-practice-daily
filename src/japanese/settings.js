@@ -23,7 +23,7 @@ const STORAGE_KEY = 'japanese-settings'
 export const DEFAULT_JAPANESE_SETTINGS = {
   smartPractice: false,
   timerMode: 'auto',
-  keyboardCovered: true,
+  keyboardCovered: false,
   speakOnCorrect: false,
   autoAdvancePerfect: true,
   autoAdvanceWithMistakes: true,
@@ -42,6 +42,16 @@ export function loadJapaneseSettings() {
     base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(10, Math.min(120, Number(base.charsPerPage) || 40))
     base.durationMinutes = Math.max(1, Math.min(60, Number(base.durationMinutes) || 5))
+    // One-time: show keyboard by default for Japanese (hiragana labels)
+    if (!localStorage.getItem('japanese-mig-kb-shown')) {
+      base.keyboardCovered = false
+      localStorage.setItem('japanese-mig-kb-shown', '1')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+      } catch {
+        /* ignore */
+      }
+    }
     return base
   } catch {
     return { ...DEFAULT_JAPANESE_SETTINGS }
