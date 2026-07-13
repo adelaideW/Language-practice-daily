@@ -701,7 +701,7 @@ export function bootSpeaking(root, opts) {
       return
     }
     // Fixed paired height ≈ controls + reserved feedback so the card does not jump
-    const FIXED = 560
+    const FIXED = 800
     pane.style.height = `${FIXED}px`
     pane.style.maxHeight = `${FIXED}px`
     side.style.height = `${FIXED}px`
