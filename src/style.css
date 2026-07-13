@@ -338,30 +338,6 @@ body::before {
   }
 }
 
-.timer-right .primary,
-.timer-right button {
-  appearance: none;
-  border: 1px solid var(--line);
-  background: var(--surface-solid);
-  color: var(--ink-soft);
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.timer-right .primary {
-  background: var(--jade);
-  border-color: var(--jade);
-  color: #fff;
-}
-
-.timer-right .primary:hover {
-  background: var(--jade-deep);
-}
-
 .advance-hint {
   color: var(--jade) !important;
   font-size: 0.9rem;
