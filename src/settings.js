@@ -18,6 +18,8 @@ const STORAGE_KEY = 'xiaohe-settings'
  * @property {boolean} autoAdvancePerfect
  * @property {boolean} autoAdvanceWithMistakes
  * @property {number} durationMinutes
+ * @property {number} minArticleChars
+ * @property {number} charsPerPage
  */
 
 /** @type {Settings} */
@@ -29,8 +31,10 @@ export const DEFAULT_SETTINGS = {
   keyboardCovered: false,
   speakOnCorrect: false,
   autoAdvancePerfect: true,
-  autoAdvanceWithMistakes: false,
+  autoAdvanceWithMistakes: true,
   durationMinutes: 5,
+  minArticleChars: 20,
+  charsPerPage: 80,
 }
 
 /** @returns {Settings} */
@@ -42,12 +46,27 @@ export function loadSettings() {
     if (raw) {
       const parsed = JSON.parse(raw)
       base = { ...DEFAULT_SETTINGS, ...parsed }
+      // Product default flipped on for auto-advance with mistakes
+      if (!Object.prototype.hasOwnProperty.call(parsed, 'autoAdvanceWithMistakes')) {
+        base.autoAdvanceWithMistakes = true
+      }
     } else {
-      // Migrate older keys once
       const oldDur = Number(localStorage.getItem('xiaohe-practice-duration'))
       if (Number.isFinite(oldDur) && oldDur > 0) base.durationMinutes = oldDur
       if (localStorage.getItem('xiaohe-keyboard-covered') === '1') {
         base.keyboardCovered = true
+      }
+    }
+    base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
+    base.charsPerPage = Math.max(20, Math.min(300, Number(base.charsPerPage) || 80))
+    // One-time: product default for “有错字时也自动下一篇” flipped on
+    if (!localStorage.getItem('xiaohe-mig-autoAdvMistakes-on')) {
+      base.autoAdvanceWithMistakes = true
+      localStorage.setItem('xiaohe-mig-autoAdvMistakes-on', '1')
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(base))
+      } catch {
+        /* ignore */
       }
     }
     return base

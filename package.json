@@ -12,5 +12,11 @@
   },
   "devDependencies": {
     "vite": "^6.3.5"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^6.1.200",
+    "pinyin-pro": "^3.28.1",
+    "tesseract.js": "^7.0.0"
   }
 }

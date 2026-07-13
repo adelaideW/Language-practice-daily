@@ -15,6 +15,15 @@ import {
   smartPassagePool,
   loadMistakes,
 } from './mistakes.js'
+import { LIBRARY_TEXTS } from './library.js'
+import {
+  passageFromText,
+  countHanzi,
+  buildPages,
+  pageIndexForUnit,
+} from './pinyinText.js'
+import { extractFromFile } from './upload.js'
+import { loadUserLibrary, addUserDoc, removeUserDoc } from './userLibrary.js'
 
 const STORAGE_MODE = 'xiaohe-practice-mode'
 const STORAGE_BEST = 'xiaohe-best-combo'
@@ -66,6 +75,11 @@ const state = {
   pausedAccumMs: 0,
   autoAdvanceNote: '',
   autoPaused: false, // paused due to inactivity
+  // pagination
+  pages: [{ start: 0, end: 0 }],
+  pageIndex: 0,
+  uploadBusy: false,
+  uploadMessage: '',
   // navigation
   passageHistory: [],
   historyIndex: -1,
@@ -331,23 +345,48 @@ function nextCharacter() {
   state.autoAdvanceNote = ''
 }
 
+function safePassageFromText(title, text) {
+  try {
+    return passageFromText(title, text)
+  } catch {
+    return null
+  }
+}
+
+function getArticlePool() {
+  const min = settings.minArticleChars
+  const poems = ARTICLES.filter((p) => countHanzi(p.text) >= min)
+  const lib = LIBRARY_TEXTS.map((t) => safePassageFromText(t.title, t.text)).filter(
+    (p) => p && countHanzi(p.text) >= min,
+  )
+  const user = loadUserLibrary()
+    .map((d) => safePassageFromText(d.title, d.text))
+    .filter((p) => p && countHanzi(p.text) >= min)
+  const pool = [...poems, ...lib, ...user]
+  return pool.length ? pool : ARTICLES
+}
+
+function pickNewPassage(mode) {
+  if (mode === 'article') {
+    return shufflePick(getArticlePool(), state.passage)
+  }
+  if (settings.smartPractice) {
+    const pool = smartPassagePool('sentence')
+    return shufflePick(pool, state.passage)
+  }
+  return shufflePick(SENTENCES, state.passage)
+}
+
 function loadPassageAt(passage) {
   state.passage = passage
   state.units = buildUnits(passage.text, passage.pinyin)
+  state.pages = buildPages(state.units, settings.charsPerPage)
+  state.pageIndex = 0
   state.unitIndex = 0
   state.buffer = ''
   state.completed = false
   state.passageWrong = 0
   state.autoAdvanceNote = ''
-}
-
-function pickNewPassage(mode) {
-  const pool = settings.smartPractice
-    ? smartPassagePool(mode === 'article' ? 'article' : 'sentence')
-    : mode === 'article'
-      ? ARTICLES
-      : SENTENCES
-  return shufflePick(pool, state.passage)
 }
 
 function startPassage(mode, { pushHistory = true } = {}) {
@@ -478,6 +517,10 @@ function applySettingsPatch(patch) {
       state.remainingMs = state.durationMinutes * 60 * 1000
     }
   }
+  if (patch.charsPerPage != null && state.units.length) {
+    state.pages = buildPages(state.units, settings.charsPerPage)
+    state.pageIndex = pageIndexForUnit(state.pages, state.unitIndex)
+  }
 
   // While settings drawer is open, avoid full-page rebuild (causes blink)
   if (state.drawer === 'settings') {
@@ -487,6 +530,55 @@ function applySettingsPatch(patch) {
 
   render()
   focusApp()
+}
+
+function goPage(delta) {
+  const next = state.pageIndex + delta
+  if (next < 0 || next >= state.pages.length) return
+  state.pageIndex = next
+  const page = state.pages[state.pageIndex]
+  if (state.unitIndex < page.start || state.unitIndex >= page.end) {
+    state.unitIndex = page.start
+    state.buffer = ''
+  }
+  clearAdvanceTimer()
+  render()
+  focusApp()
+  requestAnimationFrame(scrollCurrentIntoView)
+}
+
+async function handleUploadedFile(file) {
+  if (!file || state.uploadBusy) return
+  const keepDrawer = state.drawer
+  state.uploadBusy = true
+  state.uploadMessage = '正在解析文档…'
+  render()
+  try {
+    const extracted = await extractFromFile(file)
+    let text = extracted.text
+    if (text.length > 120000) text = text.slice(0, 120000)
+    const passage = passageFromText(extracted.title, text)
+    addUserDoc({ title: passage.title, text: passage.text })
+    state.mode = 'article'
+    saveMode('article')
+    if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length - 1) {
+      state.passageHistory = state.passageHistory.slice(0, state.historyIndex + 1)
+    }
+    state.passageHistory.push(passage)
+    state.historyIndex = state.passageHistory.length - 1
+    loadPassageAt(passage)
+    state.uploadMessage = `已加入「${passage.title}」· ${countHanzi(passage.text)} 字${
+      state.pages.length > 1 ? ` · ${state.pages.length} 页` : ''
+    }`
+    state.drawer = keepDrawer === 'settings' ? 'settings' : null
+  } catch (err) {
+    state.uploadMessage = err?.message || '上传失败'
+    state.drawer = keepDrawer
+  } finally {
+    state.uploadBusy = false
+    render()
+    if (!state.drawer) focusApp()
+  }
 }
 
 function ensureSession() {
@@ -601,17 +693,25 @@ function patchPassageCursor() {
     state.units.slice(0, state.unitIndex).map((u) => u.index),
   )
 
-  passage.querySelectorAll('.ch').forEach((el, i) => {
+  passage.querySelectorAll('.ch').forEach((el) => {
+    const i = Number(el.dataset.i)
     el.classList.toggle('done', doneIndexes.has(i))
     el.classList.toggle('current', i === currentIndex)
   })
 
-  const metaRight = document.querySelector('.passage-progress')
-  if (metaRight) {
-    metaRight.textContent = `${state.unitIndex}/${state.units.length}${
+  const metaProg = document.querySelector('.passage-progress')
+  if (metaProg) {
+    metaProg.textContent = `${state.unitIndex}/${state.units.length}${
       state.passageWrong ? ` · 错 ${state.passageWrong}` : ''
     }`
   }
+
+  const pageLabel = document.querySelector('.page-label')
+  if (pageLabel && state.pages.length > 1) {
+    pageLabel.textContent = `第 ${state.pageIndex + 1}/${state.pages.length} 页`
+  }
+
+  scrollCurrentIntoView()
 }
 
 function patchCharacterView() {
@@ -659,7 +759,23 @@ function onCorrectSyllable() {
     onPassageComplete()
     return
   }
+
+  const nextPage = pageIndexForUnit(state.pages, state.unitIndex)
+  if (nextPage !== state.pageIndex) {
+    state.pageIndex = nextPage
+    render()
+    focusApp()
+    requestAnimationFrame(scrollCurrentIntoView)
+    return
+  }
   patchLive()
+  requestAnimationFrame(scrollCurrentIntoView)
+}
+
+function scrollCurrentIntoView() {
+  const el = document.querySelector('.passage .ch.current')
+  if (!el) return
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' })
 }
 
 function onWrongKey(typed) {
@@ -850,6 +966,33 @@ function renderSettingsDrawer() {
         <section class="drawer-section">
           <h3>双拼方案</h3>
           ${schemes}
+        </section>
+        <section class="drawer-section">
+          <h3>文章练习</h3>
+          <label class="opt-row stacked">
+            <span>文章最少字数（低于此长度不抽选）</span>
+            <input type="number" id="set-min-chars" min="1" max="500" value="${settings.minArticleChars}" />
+          </label>
+          <label class="opt-row stacked">
+            <span>长文每页字数</span>
+            <input type="number" id="set-page-chars" min="20" max="300" value="${settings.charsPerPage}" />
+          </label>
+          <label class="opt-row">
+            <span class="ghost-chip upload-chip">
+              ${state.uploadBusy ? '解析中…' : '上传文章（txt / pdf / epub / 图片）'}
+              <input type="file" id="file-upload-settings" accept=".txt,.md,.pdf,.epub,.png,.jpg,.jpeg,.webp,.gif,text/plain,application/pdf,application/epub+zip,image/*" hidden ${state.uploadBusy ? 'disabled' : ''} />
+            </span>
+          </label>
+          ${
+            loadUserLibrary().length
+              ? `<ul class="mistake-list compact user-lib">${loadUserLibrary()
+                  .map(
+                    (d) =>
+                      `<li><span class="m-meta">${d.title}</span> <span class="m-count">${countHanzi(d.text)} 字</span> <button type="button" class="linkish" data-remove-doc="${d.id}">删除</button></li>`,
+                  )
+                  .join('')}</ul>`
+              : '<p class="drawer-lead">还没有上传文章 · 内置含唐诗、名著节选、名言等</p>'
+          }
         </section>
         <section class="drawer-section">
           <h3>练习体验</h3>
@@ -1046,30 +1189,57 @@ function renderPassageStage() {
     state.units.slice(0, state.unitIndex).map((u) => u.index),
   )
 
+  const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
+  const pageUnits = state.units.slice(page.start, page.end)
+  const startChar = pageUnits[0]?.index ?? 0
+  const endChar = pageUnits[pageUnits.length - 1]?.index ?? 0
+
   const chars = [...state.passage.text]
     .map((ch, i) => {
+      if (i < startChar || i > endChar) return ''
       const classes = ['ch']
       if (doneIndexes.has(i)) classes.push('done')
       if (i === currentIndex) classes.push('current')
-      return `<span class="${classes.join(' ')}">${ch}</span>`
+      return `<span class="${classes.join(' ')}" data-i="${i}">${ch}</span>`
     })
     .join('')
 
   const code = currentCode()
+  const multiPage = state.pages.length > 1
+  const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}`
+
   return `
     <div class="char-stage passage-stage">
       <div class="passage-meta">
         <div class="passage-title-row">
           ${renderPassageNav()}
           <span class="title">${state.passage.title}${settings.smartPractice ? ' · 智能' : ''}</span>
+          <span class="passage-progress">${progress}</span>
         </div>
-        <span class="passage-progress">${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}</span>
+        <div class="passage-actions">
+          <label class="ghost-chip upload-chip" title="上传文本 / PDF / EPUB / 图片">
+            ${state.uploadBusy ? '解析中…' : '上传文章'}
+            <input type="file" id="file-upload" accept=".txt,.md,.pdf,.epub,.png,.jpg,.jpeg,.webp,.gif,text/plain,application/pdf,application/epub+zip,image/*" hidden ${state.uploadBusy ? 'disabled' : ''} />
+          </label>
+        </div>
       </div>
-      <div class="passage poem">${chars}</div>
+      ${
+        multiPage
+          ? `<div class="page-bar">
+              <button type="button" class="nav-icon" id="btn-prev-page" ${state.pageIndex > 0 ? '' : 'disabled'} aria-label="上一页">‹</button>
+              <span class="page-label">第 ${state.pageIndex + 1}/${state.pages.length} 页</span>
+              <button type="button" class="nav-icon" id="btn-next-page" ${state.pageIndex < state.pages.length - 1 ? '' : 'disabled'} aria-label="下一页">›</button>
+            </div>`
+          : ''
+      }
+      <div class="passage-scroll">
+        <div class="passage poem">${chars}</div>
+      </div>
       <div class="typing-chrome">
         <div class="pinyin-line">${currentUnit ? `${currentUnit.pinyin} · ${code}` : ''}</div>
         ${renderCodeSlots()}
       </div>
+      ${state.uploadMessage ? `<p class="upload-msg">${state.uploadMessage}</p>` : ''}
     </div>
   `
 }
@@ -1108,12 +1278,12 @@ function render() {
     ${renderStats()}
     <main class="main">
       <section class="practice-card enter" id="practice-card" tabindex="0">
-        <div class="hints-row">
+        ${stage}
+        <div class="hints-row hints-row-bottom">
           <span><kbd>Space</kbd> 朗读</span>
           <span><kbd>Esc</kbd> 清空当前输入</span>
-          <span>句子/文章全对时自动下一篇</span>
+          <span>句子/文章完成后可自动下一篇</span>
         </div>
-        ${stage}
         <input id="key-mirror" class="input-mirror" autocomplete="off" autocapitalize="off" spellcheck="false" />
       </section>
       <div class="toolbar">
@@ -1209,6 +1379,25 @@ function bindEvents() {
 
   document.querySelector('#btn-prev-passage')?.addEventListener('click', goPrevPassage)
   document.querySelector('#btn-next-passage-nav')?.addEventListener('click', goNextPassage)
+  document.querySelector('#btn-prev-page')?.addEventListener('click', () => goPage(-1))
+  document.querySelector('#btn-next-page')?.addEventListener('click', () => goPage(1))
+
+  const wireUpload = (id) => {
+    document.querySelector(id)?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0]
+      e.target.value = ''
+      if (file) handleUploadedFile(file)
+    })
+  }
+  wireUpload('#file-upload')
+  wireUpload('#file-upload-settings')
+
+  document.querySelectorAll('[data-remove-doc]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      removeUserDoc(btn.dataset.removeDoc)
+      render()
+    })
+  })
 
   document.querySelector('#btn-open-mistakes')?.addEventListener('click', () => openDrawer('mistakes'))
   document.querySelector('#btn-open-settings')?.addEventListener('click', () => openDrawer('settings'))
@@ -1244,6 +1433,16 @@ function bindEvents() {
   })
   document.querySelector('#set-duration')?.addEventListener('change', (e) => {
     applySettingsPatch({ durationMinutes: Number(e.target.value) || 5 })
+  })
+  document.querySelector('#set-min-chars')?.addEventListener('change', (e) => {
+    applySettingsPatch({
+      minArticleChars: Math.max(1, Math.min(500, Number(e.target.value) || 20)),
+    })
+  })
+  document.querySelector('#set-page-chars')?.addEventListener('change', (e) => {
+    applySettingsPatch({
+      charsPerPage: Math.max(20, Math.min(300, Number(e.target.value) || 80)),
+    })
   })
   document.querySelectorAll('input[name="scheme"]').forEach((el) => {
     el.addEventListener('change', (e) => {
