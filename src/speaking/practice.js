@@ -358,7 +358,9 @@ export function bootSpeaking(root, opts) {
     if (furiganaCache.has(s)) return furiganaCache.get(s) || escapeHtml(s)
     try {
       const html = await toFuriganaHtml(s)
-      const out = html || escapeHtml(s)
+      // Prefer ruby markup; fall back to escaped plain text
+      const out =
+        html && /<ruby[\s>]/i.test(html) ? html : html && html !== s ? html : escapeHtml(s)
       furiganaCache.set(s, out)
       return out
     } catch {
@@ -434,9 +436,6 @@ export function bootSpeaking(root, opts) {
   }
 
   async function render() {
-    if (language === 'ja') {
-      settings = loadJapaneseSettings()
-    }
     const sents = sentences()
     const gradedCount = state.results.filter(Boolean).length
     const avg = gradedCount
@@ -694,7 +693,8 @@ export function bootSpeaking(root, opts) {
     root.querySelector('#set-speak-hiragana')?.addEventListener('change', (e) => {
       settings = saveJapaneseSettings({ speakShowHiragana: e.target.checked })
       furiganaCache.clear()
-      render()
+      // Full re-render so article body re-runs async furigana conversion
+      void render()
     })
     root.querySelectorAll('input[name="speak-limit-mode"]').forEach((el) => {
       el.addEventListener('change', (e) => {

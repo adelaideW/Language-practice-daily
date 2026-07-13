@@ -671,7 +671,7 @@ body::before {
 }
 
 .word-display.jp-word {
-  font-size: clamp(4rem, 12vw, 6.25rem);
+  font-size: clamp(2.6rem, 8vw, 4.25rem);
   letter-spacing: 0.06em;
 }
 
@@ -1651,14 +1651,24 @@ body::before {
 }
 
 .jp-passage {
-  font-size: clamp(1.35rem, 3vw, 1.75rem);
-  line-height: 2.15;
+  font-size: clamp(1.1rem, 2.4vw, 1.4rem);
+  line-height: 2;
   letter-spacing: 0.02em;
 }
 
-.jp-passage.has-furigana,
+.jp-passage.has-furigana {
+  line-height: 2.85;
+  padding-top: 0.35rem;
+}
+
+.word-display.jp-word {
+  font-size: clamp(2.6rem, 8vw, 4.25rem);
+  letter-spacing: 0.06em;
+}
+
 .word-display.jp-word.has-furigana {
-  line-height: 2.55;
+  line-height: 1.55;
+  padding-top: 0.55em;
 }
 
 .jp-passage ruby,
@@ -1669,20 +1679,25 @@ body::before {
 
 .jp-passage rt,
 .word-display.jp-word rt {
-  font-size: 0.5em;
-  line-height: 1.05;
+  font-size: 0.42em;
+  line-height: 1.2;
   color: var(--muted);
   font-weight: 500;
-  position: relative;
-  z-index: 2;
+  /* Extra air between furigana and kanji so the typing highlight doesn’t cover readings */
+  padding-bottom: 0.28em;
+  margin-bottom: 0.12em;
 }
 
 .jp-seg {
   position: relative;
-  padding: 0.05em 0.04em;
+  padding: 0.08em 0.05em;
   border-radius: 4px;
   transition: background 0.12s ease, color 0.12s ease;
-  display: inline;
+}
+
+.jp-passage.has-furigana .jp-seg {
+  /* Keep highlight on the kanji band, below ruby */
+  padding-top: 0.15em;
 }
 
 .jp-seg.done {
@@ -1690,43 +1705,26 @@ body::before {
 }
 
 .jp-seg.current {
-  background: var(--jade-soft);
   color: var(--jade-deep);
   box-shadow: inset 0 -2px 0 var(--jade);
+  /* Highlight sits under furigana */
+  background: linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 0.55em,
+    var(--jade-soft) 0.55em,
+    var(--jade-soft) 100%
+  );
 }
 
-/* With furigana: keep highlight on the base character band, under the rt */
-.jp-passage.has-furigana .jp-seg.current {
-  background: transparent;
-  box-shadow: none;
-  color: var(--jade-deep);
-}
-
-.jp-passage.has-furigana .jp-seg.current::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0.72em;
-  bottom: 0;
+.jp-passage:not(.has-furigana) .jp-seg.current,
+.word-display.jp-word:not(.has-furigana) .jp-seg.current {
   background: var(--jade-soft);
-  border-radius: 4px;
-  box-shadow: inset 0 -2px 0 var(--jade);
-  z-index: 0;
-  pointer-events: none;
 }
 
-.jp-passage.has-furigana .jp-seg.current ruby {
-  position: relative;
-  z-index: 1;
-}
-
-.jp-passage.has-furigana .jp-seg.current rt {
-  z-index: 3;
+.jp-seg.current rt {
   color: var(--muted);
-  text-shadow:
-    0 0 2px var(--surface-solid),
-    0 0 4px var(--surface-solid);
+  background: transparent;
 }
 
 .jp-seg.jp-punct {
@@ -1965,7 +1963,8 @@ body::before {
 }
 
 .spk-article.has-furigana {
-  line-height: 2.35;
+  line-height: 2.55;
+  padding-top: 0.25rem;
 }
 
 .spk-article ruby {
@@ -1974,45 +1973,11 @@ body::before {
 }
 
 .spk-article rt {
-  font-size: 0.55em;
-  line-height: 1.1;
+  font-size: 0.52em;
+  line-height: 1.15;
   color: var(--muted);
   font-weight: 500;
-  position: relative;
-  z-index: 2;
-}
-
-/* Keep active highlight under furigana readings */
-.spk-article.has-furigana .spk-sent.is-active {
-  background: transparent;
-  box-shadow: none;
-  position: relative;
-}
-
-.spk-article.has-furigana .spk-sent.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0.75em;
-  bottom: 0;
-  background: rgba(247, 129, 102, 0.22);
-  box-shadow: inset 0 -2px 0 rgba(247, 129, 102, 0.55);
-  border-radius: 0.2em;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.spk-article.has-furigana .spk-sent.is-active ruby {
-  position: relative;
-  z-index: 1;
-}
-
-.spk-article.has-furigana .spk-sent.is-active rt {
-  z-index: 3;
-  text-shadow:
-    0 0 2px var(--surface-solid),
-    0 0 4px var(--surface-solid);
+  padding-bottom: 0.22em;
 }
 
 .spk-listen {
