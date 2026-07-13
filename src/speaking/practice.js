@@ -593,12 +593,12 @@ export function bootSpeaking(root, opts) {
             }
           </section>
           <section class="drawer-section">
-            <h3>${t('Lesson length', 'レッスン長さ', '课文长度')}</h3>
+            <h3>${t('Article length', '文章の長さ', '文章长度')}</h3>
             <p class="drawer-lead">${
               t(
                 'Use either time or word/character count — only one applies. Set a min and max.',
-                '時間か文字数のどちらか一方。最小と最大を設定します。',
-                '时间与字数二选一，可设置最少和最多。',
+                '時間か文字数のどちらか一方だけ適用されます。最小と最大を設定します。',
+                '时间与字数二选一，同时只生效一种。可设置最少和最多。',
               )
             }</p>
             <label class="opt-row">

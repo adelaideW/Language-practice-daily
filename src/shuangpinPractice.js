@@ -366,7 +366,7 @@ function safePassageFromText(title, text) {
 }
 
 function getArticlePool() {
-  const min = settings.minArticleChars
+  const min = settings.speakMinCount || settings.minArticleChars || 20
   const poems = ARTICLES.filter((p) => countHanzi(p.text) >= min)
   const lib = LIBRARY_TEXTS.map((t) => safePassageFromText(t.title, t.text)).filter(
     (p) => p && countHanzi(p.text) >= min,
@@ -1019,14 +1019,6 @@ function renderSettingsDrawer() {
         </section>
         <section class="drawer-section">
           <h3>文章练习</h3>
-          <label class="opt-row stacked">
-            <span>文章最少字数（低于此长度不抽选）</span>
-            <input type="number" id="set-min-chars" min="1" max="500" value="${settings.minArticleChars}" />
-          </label>
-          <label class="opt-row stacked">
-            <span>长文每页字数</span>
-            <input type="number" id="set-page-chars" min="20" max="300" value="${settings.charsPerPage}" />
-          </label>
           <label class="opt-row">
             <span class="ghost-chip upload-chip">
               ${state.uploadBusy ? '解析中…' : '上传文章（txt / pdf / epub / 图片）'}
@@ -1063,7 +1055,8 @@ function renderSettingsDrawer() {
             <span>点击句子时朗读（口语）</span>
           </label>
           <div class="opt-block">
-            <p class="drawer-lead" style="margin-bottom:0.5rem">口语长度 — <strong>时间</strong>与<strong>字数</strong>二选一</p>
+            <h3 class="opt-block-title">文章长度</h3>
+            <p class="drawer-lead">时间与字数二选一，同时只生效一种。可设置最少和最多。</p>
             <label class="opt-row">
               <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
               <span>时间</span>
@@ -1091,6 +1084,10 @@ function renderSettingsDrawer() {
               <span class="unit-prefix">最多</span>
               <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">字</span>
+            </label>
+            <label class="opt-row stacked page-size-row">
+              <span>长文每页字数</span>
+              <input type="number" id="set-page-chars" min="20" max="300" value="${settings.charsPerPage}" />
             </label>
           </div>
           <label class="opt-row">
@@ -1569,11 +1566,6 @@ function bindEvents() {
   })
   document.querySelector('#set-duration')?.addEventListener('change', (e) => {
     applySettingsPatch({ durationMinutes: Number(e.target.value) || 5 })
-  })
-  document.querySelector('#set-min-chars')?.addEventListener('change', (e) => {
-    applySettingsPatch({
-      minArticleChars: Math.max(1, Math.min(500, Number(e.target.value) || 20)),
-    })
   })
   document.querySelector('#set-page-chars')?.addEventListener('change', (e) => {
     applySettingsPatch({

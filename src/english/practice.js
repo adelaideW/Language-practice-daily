@@ -331,7 +331,7 @@ export function bootEnglish(root) {
   }
 
   function getArticlePool() {
-    const min = settings.minArticleChars
+    const min = settings.speakMinCount || settings.minArticleChars || 20
     const built = ENGLISH_ARTICLES.filter((p) => countEnglishWords(p.text) >= min)
     const user = loadEnglishLibrary()
       .map((d) => ({ title: d.title, text: d.text }))
@@ -959,14 +959,6 @@ export function bootEnglish(root) {
           </section>
           <section class="drawer-section">
             <h3>Articles</h3>
-            <label class="opt-row stacked">
-              <span>Minimum words</span>
-              <input type="number" id="set-min-chars" min="1" max="2000" value="${settings.minArticleChars}" />
-            </label>
-            <label class="opt-row stacked">
-              <span>Words per page</span>
-              <input type="number" id="set-page-chars" min="5" max="500" value="${settings.charsPerPage}" />
-            </label>
             <label class="opt-row">
               <span class="ghost-chip upload-chip">
                 ${state.uploadBusy ? 'Parsing…' : 'Upload article'}
@@ -999,7 +991,8 @@ export function bootEnglish(root) {
               <span>Read when clicking on a sentence (Speaking)</span>
             </label>
             <div class="opt-block">
-              <p class="drawer-lead" style="margin-bottom:0.5rem">Speaking length — use <strong>either</strong> time or word count</p>
+              <h3 class="opt-block-title">Article length</h3>
+              <p class="drawer-lead">Use either time or word/character count — only one applies. Set a min and max.</p>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" id="set-speak-mode-time" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
                 <span>Time limit</span>
@@ -1027,6 +1020,10 @@ export function bootEnglish(root) {
                 <span class="unit-prefix">Max</span>
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">words</span>
+              </label>
+              <label class="opt-row stacked page-size-row">
+                <span>Words per page</span>
+                <input type="number" id="set-page-chars" min="5" max="500" value="${settings.charsPerPage}" />
               </label>
             </div>
             <label class="opt-row">
@@ -1207,11 +1204,6 @@ export function bootEnglish(root) {
     })
     document.querySelector('#set-duration')?.addEventListener('change', (e) => {
       applySettingsPatch({ durationMinutes: Number(e.target.value) || 5 })
-    })
-    document.querySelector('#set-min-chars')?.addEventListener('change', (e) => {
-      applySettingsPatch({
-        minArticleChars: Math.max(1, Math.min(2000, Number(e.target.value) || 40)),
-      })
     })
     document.querySelector('#set-page-chars')?.addEventListener('change', (e) => {
       applySettingsPatch({

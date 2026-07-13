@@ -304,7 +304,7 @@ export function bootJapanese(root) {
   }
 
   function getArticlePool() {
-    const min = settings.minArticleChars
+    const min = settings.speakMinCount || settings.minArticleChars || 20
     const built = JP_ARTICLES.filter((p) => countJapaneseUnits(p) >= min)
     const user = loadJapaneseLibrary()
       .map((d) => {
@@ -842,8 +842,6 @@ export function bootJapanese(root) {
           </section>
           <section class="drawer-section">
             <h3>文章</h3>
-            <label class="opt-row stacked"><span>最小単位数（ヒント付き語など）</span><input type="number" id="set-min-chars" min="1" max="500" value="${settings.minArticleChars}" /></label>
-            <label class="opt-row stacked"><span>1ページあたりの単位数</span><input type="number" id="set-page-chars" min="10" max="120" value="${settings.charsPerPage}" /></label>
             ${
               lib.length
                 ? `<ul class="mistake-list compact user-lib">${lib
@@ -863,7 +861,8 @@ export function bootJapanese(root) {
             <label class="opt-row"><input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} /><span>文をクリックしたとき読み上げ（スピーキング）</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} /><span>スピーキングで漢字にひらがなを表示</span></label>
             <div class="opt-block">
-              <p class="drawer-lead" style="margin-bottom:0.5rem">スピーキング長さ — <strong>時間</strong>か<strong>文字数</strong>のどちらか</p>
+              <h3 class="opt-block-title">文章の長さ</h3>
+              <p class="drawer-lead">時間か文字数のどちらか一方だけ適用されます。最小と最大を設定します。</p>
               <label class="opt-row">
                 <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
                 <span>時間</span>
@@ -891,6 +890,10 @@ export function bootJapanese(root) {
                 <span class="unit-prefix">最大</span>
                 <input type="number" id="set-speak-count" min="10" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
                 <span class="unit">文字</span>
+              </label>
+              <label class="opt-row stacked page-size-row">
+                <span>1ページあたりの単位数</span>
+                <input type="number" id="set-page-chars" min="10" max="120" value="${settings.charsPerPage}" />
               </label>
             </div>
             <label class="opt-row"><input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} /><span>全正解で次へ</span></label>
@@ -1110,9 +1113,6 @@ export function bootJapanese(root) {
     )
     document.querySelector('#set-duration')?.addEventListener('change', (e) =>
       applySettingsPatch({ durationMinutes: Number(e.target.value) || 5 }),
-    )
-    document.querySelector('#set-min-chars')?.addEventListener('change', (e) =>
-      applySettingsPatch({ minArticleChars: Math.max(1, Number(e.target.value) || 20) }),
     )
     document.querySelector('#set-page-chars')?.addEventListener('change', (e) =>
       applySettingsPatch({ charsPerPage: Math.max(10, Number(e.target.value) || 40) }),
