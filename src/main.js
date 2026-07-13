@@ -1,11 +1,23 @@
 import './style.css'
-import { toXiaohe, KEYBOARD_LAYOUT, selfTest } from './xiaohe.js'
+import { encode, getLayout, getSchemeLabel, selfTestScheme } from './schemes.js'
 import { CHARACTERS, SENTENCES, ARTICLES, buildUnits } from './data.js'
+import {
+  loadSettings,
+  saveSettings,
+  SCHEME_OPTIONS,
+  DEFAULT_SETTINGS,
+} from './settings.js'
+import {
+  recordMistake,
+  clearMistakes,
+  summarizeMistakes,
+  smartCharacterPool,
+  smartPassagePool,
+  loadMistakes,
+} from './mistakes.js'
 
 const STORAGE_MODE = 'xiaohe-practice-mode'
-const STORAGE_KB = 'xiaohe-keyboard-covered'
 const STORAGE_BEST = 'xiaohe-best-combo'
-const STORAGE_DURATION = 'xiaohe-practice-duration'
 
 const MODES = [
   { id: 'character', label: '单字练习' },
@@ -25,14 +37,7 @@ function saveMode(mode) {
   localStorage.setItem(STORAGE_MODE, mode)
 }
 
-function loadDuration() {
-  const n = Number(localStorage.getItem(STORAGE_DURATION))
-  return Number.isFinite(n) && n > 0 ? n : 5
-}
-
-function saveDuration(mins) {
-  localStorage.setItem(STORAGE_DURATION, String(mins))
-}
+let settings = loadSettings()
 
 const state = {
   mode: loadMode(),
@@ -43,8 +48,6 @@ const state = {
   best: Number(localStorage.getItem(STORAGE_BEST) || 0),
   startedAt: null,
   keystrokes: 0,
-  keyboardCovered: localStorage.getItem(STORAGE_KB) === '1',
-  showHints: true,
   currentChar: null,
   passage: null,
   units: [],
@@ -52,13 +55,17 @@ const state = {
   completed: false,
   passageWrong: 0,
   passagesDone: 0,
-  // timer
-  durationMinutes: loadDuration(),
+  durationMinutes: settings.durationMinutes || DEFAULT_SETTINGS.durationMinutes,
   sessionEndsAt: null,
   sessionActive: false,
   sessionFinished: false,
   remainingMs: 0,
   autoAdvanceNote: '',
+  // navigation
+  passageHistory: [],
+  historyIndex: -1,
+  // drawers
+  drawer: null, // 'mistakes' | 'settings' | null
 }
 
 const app = document.querySelector('#app')
@@ -66,11 +73,14 @@ let tickHandle = null
 let advanceTimer = null
 
 function shufflePick(list, avoid) {
+  if (!list.length) return null
   if (list.length === 1) return list[0]
   let item
+  let guard = 0
   do {
     item = list[Math.floor(Math.random() * list.length)]
-  } while (avoid && item === avoid)
+    guard += 1
+  } while (avoid && item === avoid && guard < 20)
   return item
 }
 
@@ -81,7 +91,7 @@ function currentTarget() {
 
 function currentCode() {
   const t = currentTarget()
-  return t ? toXiaohe(t.pinyin) : ''
+  return t ? encode(settings.scheme, t.pinyin) : ''
 }
 
 function formatTime(ms) {
@@ -94,7 +104,7 @@ function formatTime(ms) {
 function elapsedMinutes() {
   if (!state.startedAt) return 0
   const end = state.sessionFinished
-    ? (state.sessionEndsAt || performance.now())
+    ? state.sessionEndsAt || performance.now()
     : performance.now()
   return Math.max((end - state.startedAt) / 60000, 1 / 60)
 }
@@ -121,21 +131,68 @@ function clearAdvanceTimer() {
 }
 
 function nextCharacter() {
-  state.currentChar = shufflePick(CHARACTERS, state.currentChar)
+  const pool = settings.smartPractice ? smartCharacterPool() : CHARACTERS
+  state.currentChar = shufflePick(pool, state.currentChar)
   state.buffer = ''
   state.completed = false
   state.autoAdvanceNote = ''
 }
 
-function startPassage(mode) {
-  const pool = mode === 'article' ? ARTICLES : SENTENCES
-  state.passage = shufflePick(pool, state.passage)
-  state.units = buildUnits(state.passage.text, state.passage.pinyin)
+function loadPassageAt(passage) {
+  state.passage = passage
+  state.units = buildUnits(passage.text, passage.pinyin)
   state.unitIndex = 0
   state.buffer = ''
   state.completed = false
   state.passageWrong = 0
   state.autoAdvanceNote = ''
+}
+
+function pickNewPassage(mode) {
+  const pool = settings.smartPractice
+    ? smartPassagePool(mode === 'article' ? 'article' : 'sentence')
+    : mode === 'article'
+      ? ARTICLES
+      : SENTENCES
+  return shufflePick(pool, state.passage)
+}
+
+function startPassage(mode, { pushHistory = true } = {}) {
+  const passage = pickNewPassage(mode)
+  if (!passage) return
+  if (pushHistory) {
+    // Drop any forward history when branching
+    if (state.historyIndex >= 0 && state.historyIndex < state.passageHistory.length - 1) {
+      state.passageHistory = state.passageHistory.slice(0, state.historyIndex + 1)
+    }
+    state.passageHistory.push(passage)
+    state.historyIndex = state.passageHistory.length - 1
+  }
+  loadPassageAt(passage)
+}
+
+function goHistory(delta) {
+  const next = state.historyIndex + delta
+  if (next < 0 || next >= state.passageHistory.length) return
+  state.historyIndex = next
+  loadPassageAt(state.passageHistory[next])
+  clearAdvanceTimer()
+  render()
+  focusApp()
+}
+
+function goNextPassage() {
+  if (state.historyIndex < state.passageHistory.length - 1) {
+    goHistory(1)
+    return
+  }
+  startPassage(state.mode, { pushHistory: true })
+  render()
+  focusApp()
+}
+
+function goPrevPassage() {
+  goHistory(-1)
 }
 
 function resetSessionStats() {
@@ -195,6 +252,8 @@ function setMode(mode) {
   state.mode = mode
   saveMode(mode)
   resetSessionStats()
+  state.passageHistory = []
+  state.historyIndex = -1
   if (mode === 'character') nextCharacter()
   else startPassage(mode)
   render()
@@ -204,7 +263,7 @@ function setMode(mode) {
 function setDuration(mins) {
   const n = Math.min(60, Math.max(1, Math.round(Number(mins) || 5)))
   state.durationMinutes = n
-  saveDuration(n)
+  settings = saveSettings({ durationMinutes: n })
   if (!state.sessionActive) {
     state.remainingMs = n * 60 * 1000
   }
@@ -212,8 +271,26 @@ function setDuration(mins) {
   focusApp()
 }
 
+function applySettingsPatch(patch) {
+  const wasDrawer = state.drawer
+  settings = saveSettings(patch)
+  if (patch.durationMinutes != null) {
+    state.durationMinutes = settings.durationMinutes
+    if (!state.sessionActive) {
+      state.remainingMs = state.durationMinutes * 60 * 1000
+    }
+  }
+  state.drawer = wasDrawer
+  render()
+  if (!wasDrawer) focusApp()
+}
+
 function ensureSession() {
-  if (state.sessionActive || state.sessionFinished) return
+  if (state.sessionActive || state.sessionFinished) return true
+  if (settings.timerMode === 'manual') {
+    // Require explicit start — allow typing but don't start clock
+    return true
+  }
   startSession()
   const right = document.querySelector('.timer-right')
   if (right) {
@@ -227,23 +304,23 @@ function ensureSession() {
     el.disabled = true
   })
   document.querySelectorAll('.dur-btn').forEach((el) => el.classList.remove('active'))
+  return true
 }
 
 function onPassageComplete() {
   state.passagesDone += 1
   const clean = state.passageWrong === 0
   const timed = state.sessionActive && !state.sessionFinished
+  const autoOk = settings.autoAdvancePerfect && clean && timed
 
-  if (timed && clean) {
+  if (autoOk) {
     state.autoAdvanceNote = '全部正确 · 下一篇'
     state.completed = true
     render()
     clearAdvanceTimer()
     advanceTimer = setTimeout(() => {
       if (!state.sessionActive || state.sessionFinished) return
-      startPassage(state.mode)
-      render()
-      focusApp()
+      goNextPassage()
     }, 700)
     return
   }
@@ -293,13 +370,13 @@ function patchPinyinLine() {
     line.textContent = ''
     return
   }
-  line.textContent = `${t.pinyin} · ${toXiaohe(t.pinyin)}`
+  line.textContent = `${t.pinyin} · ${encode(settings.scheme, t.pinyin)}`
 }
 
 function patchKeyboardHints() {
   const code = currentCode()
-  const initKey = state.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = state.showHints && code && !state.sessionFinished ? code[1] : ''
+  const initKey = settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
   document.querySelectorAll('.key[data-key]').forEach((el) => {
     const keyId = el.dataset.key
@@ -342,7 +419,6 @@ function patchCharacterView() {
   patchStats()
 }
 
-/** Soft update while staying on the same passage/character — no full DOM rebuild. */
 function patchLive() {
   if (state.mode === 'character') {
     patchCharacterView()
@@ -364,6 +440,8 @@ function onCorrectSyllable() {
   }
   state.buffer = ''
 
+  if (settings.speakOnCorrect) speakCurrent()
+
   if (state.mode === 'character') {
     nextCharacter()
     patchLive()
@@ -378,7 +456,19 @@ function onCorrectSyllable() {
   patchLive()
 }
 
-function onWrongKey() {
+function onWrongKey(typed) {
+  const target = currentTarget()
+  const expectedCode = currentCode()
+  if (target) {
+    recordMistake({
+      char: target.char,
+      pinyin: target.pinyin,
+      expectedCode,
+      typed: typed || state.buffer,
+      scheme: settings.scheme,
+      mode: state.mode,
+    })
+  }
   state.wrong += 1
   state.passageWrong += 1
   state.combo = 0
@@ -388,7 +478,11 @@ function onWrongKey() {
 
 function handleKey(key) {
   if (state.sessionFinished) return
+  if (state.drawer) return
   if (state.completed && state.mode !== 'character') return
+  if (settings.timerMode === 'manual' && !state.sessionActive && !state.sessionFinished) {
+    // Still allow practice without timer; clock stays idle until Start
+  }
   const target = currentTarget()
   if (!target) return
 
@@ -399,12 +493,19 @@ function handleKey(key) {
   const lower = key.toLowerCase()
   if (!/^[a-z;]$/.test(lower)) return
 
+  // In manual mode without session, still count practice but CPM uses startedAt only when active
+  if (settings.timerMode === 'auto') {
+    // ensureSession already started
+  } else if (!state.sessionActive && !state.startedAt) {
+    // Track informal start for CPM only after Start — leave startedAt null until Start
+  }
+
   state.keystrokes += 1
   const nextBuf = state.buffer + lower
   const expected = code.slice(0, nextBuf.length)
 
   if (nextBuf !== expected) {
-    onWrongKey()
+    onWrongKey(nextBuf)
     return
   }
 
@@ -424,8 +525,156 @@ function speakCurrent() {
 }
 
 function focusApp() {
+  if (state.drawer) return
   const mirror = document.querySelector('#key-mirror')
   if (mirror) mirror.focus({ preventScroll: true })
+}
+
+function openDrawer(name) {
+  state.drawer = name
+  render()
+}
+
+function closeDrawer() {
+  state.drawer = null
+  render()
+  focusApp()
+}
+
+function formatAgo(ts) {
+  const sec = Math.floor((Date.now() - ts) / 1000)
+  if (sec < 60) return '刚刚'
+  if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`
+  if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`
+  return `${Math.floor(sec / 86400)} 天前`
+}
+
+function renderMistakesDrawer() {
+  const summary = summarizeMistakes()
+  const topChars = summary.topChars.length
+    ? summary.topChars
+        .map(
+          (c) =>
+            `<li><span class="m-char">${c.char}</span> <span class="m-meta">${c.pinyin} · ${c.expectedCode}</span> <span class="m-count">${c.count} 次</span></li>`,
+        )
+        .join('')
+    : '<li class="empty">暂无常错字</li>'
+
+  const topCodes = summary.topCodes.length
+    ? summary.topCodes
+        .map((c) => `<li><code>${c.code}</code> <span class="m-count">${c.count} 次</span></li>`)
+        .join('')
+    : '<li class="empty">暂无</li>'
+
+  const recent = summary.recent.length
+    ? summary.recent
+        .map(
+          (m) =>
+            `<li>
+              <span class="m-char">${m.char}</span>
+              <span class="m-meta">应 ${m.expectedCode} · 打了 ${m.typed || '—'}</span>
+              <span class="m-time">${formatAgo(m.at)}</span>
+            </li>`,
+        )
+        .join('')
+    : '<li class="empty">还没有记录错误</li>'
+
+  return `
+    <aside class="drawer" role="dialog" aria-label="错字本">
+      <div class="drawer-head">
+        <h2>错字本</h2>
+        <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="关闭">×</button>
+      </div>
+      <div class="drawer-body">
+        <p class="drawer-lead">共 ${summary.total} 次错误 · 本地保存</p>
+        <section class="drawer-section">
+          <h3>常错字</h3>
+          <ul class="mistake-list">${topChars}</ul>
+        </section>
+        <section class="drawer-section">
+          <h3>常错编码</h3>
+          <ul class="mistake-list compact">${topCodes}</ul>
+        </section>
+        <section class="drawer-section">
+          <h3>最近错误</h3>
+          <ul class="mistake-list">${recent}</ul>
+        </section>
+      </div>
+      <div class="drawer-foot">
+        <button type="button" class="primary" id="btn-practice-mistakes">练习这些</button>
+        <button type="button" id="btn-clear-mistakes">清空记录</button>
+      </div>
+    </aside>
+  `
+}
+
+function renderSettingsDrawer() {
+  const schemes = SCHEME_OPTIONS.map(
+    (s) =>
+      `<label class="opt-row">
+        <input type="radio" name="scheme" value="${s.id}" ${settings.scheme === s.id ? 'checked' : ''} />
+        <span>${s.label}</span>
+      </label>`,
+  ).join('')
+
+  return `
+    <aside class="drawer" role="dialog" aria-label="设置">
+      <div class="drawer-head">
+        <h2>设置</h2>
+        <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="关闭">×</button>
+      </div>
+      <div class="drawer-body">
+        <section class="drawer-section">
+          <h3>智能练习</h3>
+          <label class="opt-row">
+            <input type="checkbox" id="set-smart" ${settings.smartPractice ? 'checked' : ''} />
+            <span>根据错字本生成针对性练习</span>
+          </label>
+        </section>
+        <section class="drawer-section">
+          <h3>计时器</h3>
+          <label class="opt-row">
+            <input type="radio" name="timerMode" value="auto" ${settings.timerMode === 'auto' ? 'checked' : ''} />
+            <span>开始打字时自动计时</span>
+          </label>
+          <label class="opt-row">
+            <input type="radio" name="timerMode" value="manual" ${settings.timerMode === 'manual' ? 'checked' : ''} />
+            <span>手动点击「开始计时」</span>
+          </label>
+          <label class="opt-row stacked">
+            <span>默认时长（分钟）</span>
+            <input type="number" id="set-duration" min="1" max="60" value="${settings.durationMinutes}" />
+          </label>
+        </section>
+        <section class="drawer-section">
+          <h3>双拼方案</h3>
+          ${schemes}
+        </section>
+        <section class="drawer-section">
+          <h3>练习体验</h3>
+          <label class="opt-row">
+            <input type="checkbox" id="set-hints" ${settings.showHints ? 'checked' : ''} />
+            <span>显示键位提示</span>
+          </label>
+          <label class="opt-row">
+            <input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} />
+            <span>默认遮盖键盘</span>
+          </label>
+          <label class="opt-row">
+            <input type="checkbox" id="set-speak" ${settings.speakOnCorrect ? 'checked' : ''} />
+            <span>正确时朗读</span>
+          </label>
+          <label class="opt-row">
+            <input type="checkbox" id="set-auto-advance" ${settings.autoAdvancePerfect ? 'checked' : ''} />
+            <span>全对时自动下一篇</span>
+          </label>
+        </section>
+      </div>
+      <div class="drawer-foot">
+        <button type="button" class="primary" id="btn-close-drawer">完成</button>
+      </div>
+    </aside>
+  `
 }
 
 function renderTimerBar() {
@@ -481,13 +730,15 @@ function renderStats() {
 }
 
 function renderKeyboard() {
+  const layout = getLayout(settings.scheme)
   const code = currentCode()
-  const initKey = state.showHints && code && !state.sessionFinished ? code[0] : ''
-  const finalKey = state.showHints && code && !state.sessionFinished ? code[1] : ''
+  const initKey = settings.showHints && code && !state.sessionFinished ? code[0] : ''
+  const finalKey = settings.showHints && code && !state.sessionFinished ? code[1] : ''
   const typedLen = state.buffer.length
 
-  const rows = KEYBOARD_LAYOUT.map(
-    (row) => `
+  const rows = layout
+    .map(
+      (row) => `
     <div class="kb-row">
       ${row
         .map(([display, initLabel, finalLabel]) => {
@@ -506,18 +757,19 @@ function renderKeyboard() {
         .join('')}
     </div>
   `,
-  ).join('')
+    )
+    .join('')
 
   return `
     <div class="keyboard-wrap">
       <button type="button" class="keyboard-toggle" id="kb-toggle">
-        ${state.keyboardCovered ? '键盘已遮盖 · 点此恢复' : '点此遮盖键盘'}
+        ${settings.keyboardCovered ? '键盘已遮盖 · 点此恢复' : '点此遮盖键盘'}
       </button>
       <div class="legend">
         <span class="init">声母</span>
         <span class="final">韵母</span>
       </div>
-      <div class="keyboard ${state.keyboardCovered ? 'covered' : ''}" id="keyboard">
+      <div class="keyboard ${settings.keyboardCovered ? 'covered' : ''}" id="keyboard">
         ${rows}
       </div>
     </div>
@@ -543,7 +795,7 @@ function renderCharacterStage() {
   if (state.sessionFinished) return renderSessionSummary()
   const t = state.currentChar
   if (!t) return ''
-  const code = toXiaohe(t.pinyin)
+  const code = encode(settings.scheme, t.pinyin)
   return `
     <div class="char-stage">
       <div class="pinyin-line">${t.pinyin} · ${code}</div>
@@ -564,6 +816,17 @@ function renderSessionSummary() {
       <div class="toolbar">
         <button type="button" class="primary" id="btn-restart-timer">再练一轮</button>
       </div>
+    </div>
+  `
+}
+
+function renderPassageNav() {
+  const canPrev = state.historyIndex > 0
+  const canNext = true
+  return `
+    <div class="passage-nav">
+      <button type="button" class="nav-icon" id="btn-prev-passage" ${canPrev ? '' : 'disabled'} aria-label="上一篇">‹</button>
+      <button type="button" class="nav-icon" id="btn-next-passage-nav" ${canNext ? '' : 'disabled'} aria-label="下一篇">›</button>
     </div>
   `
 }
@@ -607,7 +870,10 @@ function renderPassageStage() {
   return `
     <div class="char-stage passage-stage">
       <div class="passage-meta">
-        <span class="title">${state.passage.title}</span>
+        <div class="passage-title-row">
+          ${renderPassageNav()}
+          <span class="title">${state.passage.title}${settings.smartPractice ? ' · 智能' : ''}</span>
+        </div>
         <span class="passage-progress">${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}</span>
       </div>
       <div class="passage poem">${chars}</div>
@@ -628,13 +894,26 @@ function render() {
   const stage =
     state.mode === 'character' ? renderCharacterStage() : renderPassageStage()
 
+  const drawer =
+    state.drawer === 'mistakes'
+      ? renderMistakesDrawer()
+      : state.drawer === 'settings'
+        ? renderSettingsDrawer()
+        : ''
+
+  const mistakeCount = loadMistakes().length
+
   app.innerHTML = `
     <header class="topbar">
       <div class="brand">
         <h1>双拼练习</h1>
-        <span class="scheme">小鹤双拼</span>
+        <span class="scheme">${getSchemeLabel(settings.scheme)}</span>
       </div>
       <nav class="mode-tabs" aria-label="练习模式">${modeButtons}</nav>
+      <div class="top-actions">
+        <button type="button" class="ghost-chip" id="btn-open-mistakes">错字本${mistakeCount ? ` · ${mistakeCount}` : ''}</button>
+        <button type="button" class="ghost-chip" id="btn-open-settings">设置</button>
+      </div>
     </header>
     ${renderTimerBar()}
     ${renderStats()}
@@ -652,15 +931,15 @@ function render() {
         <button type="button" id="btn-skip">跳过</button>
         <button type="button" id="btn-speak">朗读</button>
         <button type="button" id="btn-reset">重置统计</button>
-        <button type="button" id="btn-hints">${state.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
+        <button type="button" id="btn-hints">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
       </div>
       ${renderKeyboard()}
     </main>
-    <p class="footer-note">本地练习 · 文章模式收录唐诗 · 偏好已自动保存</p>
+    <p class="footer-note">本地练习 · 偏好与错字本已自动保存</p>
+    ${state.drawer ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${drawer}` : ''}
   `
 
   bindEvents()
-  // One-shot enter animation only
   requestAnimationFrame(() => {
     document.querySelector('.practice-card')?.classList.remove('enter')
   })
@@ -669,7 +948,11 @@ function render() {
 function restartRound() {
   resetSessionStats()
   if (state.mode === 'character') nextCharacter()
-  else startPassage(state.mode)
+  else {
+    state.passageHistory = []
+    state.historyIndex = -1
+    startPassage(state.mode)
+  }
   startSession()
   render()
   focusApp()
@@ -694,18 +977,14 @@ function bindEvents() {
     focusApp()
   })
 
-  document.querySelector('#btn-end-timer')?.addEventListener('click', () => {
-    endSession()
-  })
+  document.querySelector('#btn-end-timer')?.addEventListener('click', () => endSession())
 
   document.querySelectorAll('#btn-restart-timer').forEach((btn) => {
     btn.addEventListener('click', restartRound)
   })
 
   document.querySelector('#kb-toggle')?.addEventListener('click', () => {
-    state.keyboardCovered = !state.keyboardCovered
-    localStorage.setItem(STORAGE_KB, state.keyboardCovered ? '1' : '0')
-    render()
+    applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })
   })
 
   document.querySelector('#btn-skip')?.addEventListener('click', () => {
@@ -713,11 +992,10 @@ function bindEvents() {
     clearAdvanceTimer()
     if (state.mode === 'character') {
       nextCharacter()
+      render()
     } else {
-      startPassage(state.mode)
+      goNextPassage()
     }
-    state.buffer = ''
-    render()
     focusApp()
   })
 
@@ -726,31 +1004,91 @@ function bindEvents() {
   document.querySelector('#btn-reset')?.addEventListener('click', () => {
     resetSessionStats()
     if (state.mode === 'character') nextCharacter()
-    else startPassage(state.mode)
+    else {
+      state.passageHistory = []
+      state.historyIndex = -1
+      startPassage(state.mode)
+    }
     render()
     focusApp()
   })
 
   document.querySelector('#btn-hints')?.addEventListener('click', () => {
-    state.showHints = !state.showHints
-    render()
-    focusApp()
+    applySettingsPatch({ showHints: !settings.showHints })
   })
 
   document.querySelector('#btn-next-passage')?.addEventListener('click', () => {
     if (state.sessionFinished) return
-    startPassage(state.mode)
+    goNextPassage()
+  })
+
+  document.querySelector('#btn-prev-passage')?.addEventListener('click', goPrevPassage)
+  document.querySelector('#btn-next-passage-nav')?.addEventListener('click', goNextPassage)
+
+  document.querySelector('#btn-open-mistakes')?.addEventListener('click', () => openDrawer('mistakes'))
+  document.querySelector('#btn-open-settings')?.addEventListener('click', () => openDrawer('settings'))
+  document.querySelector('#drawer-backdrop')?.addEventListener('click', closeDrawer)
+  document.querySelectorAll('#btn-close-drawer').forEach((btn) => {
+    btn.addEventListener('click', closeDrawer)
+  })
+
+  document.querySelector('#btn-clear-mistakes')?.addEventListener('click', () => {
+    clearMistakes()
+    render()
+  })
+
+  document.querySelector('#btn-practice-mistakes')?.addEventListener('click', () => {
+    settings = saveSettings({ smartPractice: true })
+    state.drawer = null
+    state.passageHistory = []
+    state.historyIndex = -1
+    if (state.mode === 'character') nextCharacter()
+    else startPassage(state.mode)
     render()
     focusApp()
+  })
+
+  // Settings controls — keep drawer open
+  document.querySelector('#set-smart')?.addEventListener('change', (e) => {
+    applySettingsPatch({ smartPractice: e.target.checked })
+  })
+  document.querySelectorAll('input[name="timerMode"]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) applySettingsPatch({ timerMode: e.target.value })
+    })
+  })
+  document.querySelector('#set-duration')?.addEventListener('change', (e) => {
+    applySettingsPatch({ durationMinutes: Number(e.target.value) || 5 })
+  })
+  document.querySelectorAll('input[name="scheme"]').forEach((el) => {
+    el.addEventListener('change', (e) => {
+      if (e.target.checked) applySettingsPatch({ scheme: e.target.value })
+    })
+  })
+  document.querySelector('#set-hints')?.addEventListener('change', (e) => {
+    applySettingsPatch({ showHints: e.target.checked })
+  })
+  document.querySelector('#set-cover')?.addEventListener('change', (e) => {
+    applySettingsPatch({ keyboardCovered: e.target.checked })
+  })
+  document.querySelector('#set-speak')?.addEventListener('change', (e) => {
+    applySettingsPatch({ speakOnCorrect: e.target.checked })
+  })
+  document.querySelector('#set-auto-advance')?.addEventListener('change', (e) => {
+    applySettingsPatch({ autoAdvancePerfect: e.target.checked })
   })
 
   const mirror = document.querySelector('#key-mirror')
   const card = document.querySelector('#practice-card')
   card?.addEventListener('click', focusApp)
   mirror?.addEventListener('keydown', (e) => {
-    if (e.target?.id === 'custom-duration') return
+    e.stopPropagation()
     if (e.key === 'Escape') {
       e.preventDefault()
+      if (state.drawer) {
+        closeDrawer()
+        return
+      }
       state.buffer = ''
       patchLive()
       return
@@ -777,18 +1115,18 @@ function bindEvents() {
 
 window.addEventListener('keydown', (e) => {
   const tag = document.activeElement?.tagName
-  const id = document.activeElement?.id
-  if (tag === 'INPUT' || tag === 'TEXTAREA') {
-    if (id === 'custom-duration') return
-    if (id !== 'key-mirror') return
-  }
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return
   if (e.key === 'Escape') {
+    if (state.drawer) {
+      closeDrawer()
+      return
+    }
     state.buffer = ''
     patchLive()
     return
   }
+  if (state.drawer) return
   if (e.key === ' ' || e.code === 'Space') {
-    if (id === 'custom-duration') return
     e.preventDefault()
     speakCurrent()
     return
@@ -807,14 +1145,10 @@ tickHandle = setInterval(() => {
 }, 250)
 
 if (import.meta.env.DEV) {
-  const results = selfTest()
+  const results = selfTestScheme('xiaohe')
   const failed = results.filter((r) => !r.ok)
-  if (failed.length) console.warn('Xiaohe self-test failures', failed)
+  if (failed.length) console.warn('Scheme self-test failures', failed)
   else console.info('Xiaohe self-test passed', results.length)
-
-  for (const a of ARTICLES) {
-    buildUnits(a.text, a.pinyin)
-  }
 }
 
 state.remainingMs = state.durationMinutes * 60 * 1000
