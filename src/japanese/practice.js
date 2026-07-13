@@ -607,7 +607,7 @@ export function bootJapanese(root) {
     if (!state.passage || state.completed || state.sessionFinished) return
     const cur = currentTarget()
     const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    document.querySelectorAll('.jp-seg').forEach((el) => {
+    document.querySelectorAll('.jp-seg, .word-display .word-ch').forEach((el) => {
       const i = Number(el.dataset.seg)
       el.classList.toggle('done', doneSeg.has(i))
       el.classList.toggle('current', cur && i === cur.index)
@@ -703,8 +703,63 @@ export function bootJapanese(root) {
       </div>`
   }
 
+  function renderWordStage() {
+    if (state.sessionFinished) {
+      return `<div class="complete-banner"><h2>セッション終了</h2><p>${accuracy()}% · ${cpm()} 単位/分</p>
+        <div class="toolbar"><button type="button" class="primary" data-restart>もう一度</button></div></div>`
+    }
+    if (state.completed) {
+      const hasMistakes = state.passageWrong > 0
+      return `<div class="complete-banner">
+        <h2>${hasMistakes ? '完了' : '完璧！'}</h2>
+        <p>${state.autoAdvanceNote || `${accuracy()}%`}</p>
+        <div class="toolbar">
+          ${hasMistakes ? `<button type="button" id="btn-redo-passage">再挑戦 <kbd class="btn-kbd">⌥R</kbd></button>` : ''}
+          <button type="button" class="primary" id="btn-next-passage">次へ <kbd class="btn-kbd">⌥N</kbd></button>
+        </div></div>`
+    }
+
+    const segs = state.passage.segments || []
+    const cur = currentTarget()
+    const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
+    const letters = segs
+      .map((seg, i) => {
+        const classes = ['word-ch']
+        if (!seg.kana) classes.push('jp-punct')
+        if (doneSeg.has(i)) classes.push('done')
+        if (cur && i === cur.index) classes.push('current')
+        return `<span class="${classes.join(' ')}" data-seg="${i}">${escapeHtml(seg.surface)}</span>`
+      })
+      .join('')
+
+    const exp = currentExpected()
+    const slots = [...exp]
+      .map((ch, i) => {
+        const filled = i < state.buffer.length
+        return `<div class="code-slot ${filled ? 'filled' : ''}">${filled ? state.buffer[i] : ''}</div>`
+      })
+      .join('')
+    const hira = cur ? hintHiragana(cur.kana) : ''
+    const hintText =
+      cur?.kind === 'punct' || cur?.kind === 'space'
+        ? cur.kind === 'space'
+          ? 'space'
+          : `${cur.surface} · ${exp}`
+        : cur
+          ? `${hira} · ${exp}`
+          : ''
+
+    return `
+      <div class="char-stage word-stage">
+        <div class="pinyin-line">${hintText}</div>
+        <div class="code-progress">${slots}</div>
+        <div class="hanzi word-display jp-word">${letters}</div>
+      </div>`
+  }
+
   function renderStage() {
     if (!state.passage) return ''
+    if (state.mode === 'word') return renderWordStage()
     if (state.sessionFinished) {
       return `<div class="complete-banner"><h2>セッション終了</h2><p>${accuracy()}% · ${cpm()} 単位/分</p>
         <div class="toolbar"><button type="button" class="primary" data-restart>もう一度</button></div></div>`

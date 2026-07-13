@@ -650,6 +650,64 @@ body::before {
   color: var(--jade-deep);
 }
 
+.word-stage {
+  flex: 1;
+  justify-content: center;
+  min-height: 11rem;
+  width: 100%;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.word-display {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.02em;
+  max-width: 100%;
+  text-align: center;
+}
+
+.word-display.english-word {
+  font-size: clamp(3.4rem, 11vw, 5.75rem);
+  letter-spacing: 0.04em;
+  word-break: break-word;
+}
+
+.word-display.jp-word {
+  font-size: clamp(4rem, 12vw, 6.25rem);
+  letter-spacing: 0.06em;
+}
+
+.word-display .word-ch {
+  transition: color 0.12s, opacity 0.12s;
+}
+
+.word-display .word-ch.done {
+  color: var(--muted);
+  opacity: 0.55;
+}
+
+.word-display .word-ch.current {
+  color: var(--jade-deep);
+  position: relative;
+}
+
+.word-display .word-ch.current::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 0.06em;
+  height: 0.08em;
+  border-radius: 999px;
+  background: var(--jade);
+}
+
+.word-display .word-ch.wrong {
+  color: var(--coral);
+}
+
 @keyframes pop {
   0% {
     transform: scale(1);

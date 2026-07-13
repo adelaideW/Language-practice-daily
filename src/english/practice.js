@@ -627,7 +627,7 @@ export function bootEnglish(root) {
     if (!state.passage || state.completed || state.sessionFinished) return
     const currentIndex = state.units[state.unitIndex]?.index ?? -1
     const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    document.querySelectorAll('.passage .ch').forEach((el) => {
+    document.querySelectorAll('.passage .ch, .word-display .word-ch').forEach((el) => {
       const i = Number(el.dataset.i)
       el.classList.toggle('done', doneIndexes.has(i))
       el.classList.toggle('current', i === currentIndex)
@@ -791,8 +791,47 @@ export function bootEnglish(root) {
     `
   }
 
+  function renderWordStage() {
+    if (state.sessionFinished) return renderSessionSummary()
+    if (state.completed) {
+      const hasMistakes = state.passageWrong > 0
+      return `
+        <div class="complete-banner">
+          <h2>${hasMistakes ? 'Word complete' : 'Perfect!'}</h2>
+          <p>${state.autoAdvanceNote || `${accuracy()}% · ${wpm()} WPM`}</p>
+          <div class="toolbar">
+            ${hasMistakes ? `<button type="button" id="btn-redo-passage">Retry <kbd class="btn-kbd">⌥R</kbd></button>` : ''}
+            <button type="button" class="primary" id="btn-next-passage">Next <kbd class="btn-kbd">⌥N</kbd></button>
+          </div>
+        </div>
+      `
+    }
+
+    const word = state.passage?.text || ''
+    const currentIndex = state.units[state.unitIndex]?.index ?? -1
+    const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
+    const letters = [...word]
+      .map((ch, i) => {
+        const classes = ['word-ch']
+        if (doneIndexes.has(i)) classes.push('done')
+        if (i === currentIndex) classes.push('current')
+        if (state.lastWrong && i === currentIndex) classes.push('wrong')
+        return `<span class="${classes.join(' ')}" data-i="${i}">${escapeHtml(ch)}</span>`
+      })
+      .join('')
+    const t = currentTarget()
+
+    return `
+      <div class="char-stage word-stage">
+        <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
+        <div class="hanzi word-display english-word" aria-label="${escapeHtml(word)}">${letters}</div>
+      </div>
+    `
+  }
+
   function renderStage() {
     if (!state.passage) return ''
+    if (state.mode === 'word') return renderWordStage()
     if (state.sessionFinished) return renderSessionSummary()
     if (state.completed) {
       const hasMistakes = state.passageWrong > 0
