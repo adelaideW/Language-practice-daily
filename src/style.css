@@ -270,9 +270,9 @@ body::before {
 }
 
 .icon-btn:hover {
-  border-color: var(--jade);
-  color: var(--jade-deep);
-  background: var(--jade-soft);
+  border-color: rgba(26, 35, 50, 0.16);
+  color: var(--ink);
+  background: #e8eaed;
 }
 
 .icon-btn-danger:hover {
@@ -293,6 +293,13 @@ body::before {
   padding: 0.45rem 0.9rem;
   border-radius: 999px;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.timer-right button:not(.icon-btn):not(.primary):hover {
+  background: #e8eaed;
+  border-color: rgba(26, 35, 50, 0.16);
+  color: var(--ink);
 }
 
 .timer-right .primary {
@@ -303,6 +310,8 @@ body::before {
 
 .timer-right .primary:hover {
   background: var(--jade-deep);
+  border-color: var(--jade-deep);
+  color: #fff;
 }
 
 .timer-value {
@@ -642,7 +651,8 @@ body::before {
 
 .toolbar button:hover,
 .ghost-btn:hover {
-  background: var(--paper-2);
+  background: #e8eaed;
+  border-color: rgba(26, 35, 50, 0.16);
   color: var(--ink);
 }
 
@@ -654,6 +664,8 @@ body::before {
 
 .toolbar button.primary:hover {
   background: var(--jade-deep);
+  border-color: var(--jade-deep);
+  color: #fff;
 }
 
 .keyboard-wrap {
@@ -998,7 +1010,7 @@ body::before {
 .drawer-foot button {
   appearance: none;
   border: 1px solid var(--line);
-  background: var(--paper-2);
+  background: var(--surface-solid);
   color: var(--ink-soft);
   font-family: var(--font-body);
   font-size: 0.88rem;
@@ -1006,11 +1018,24 @@ body::before {
   padding: 0.55rem 0.9rem;
   border-radius: 999px;
   cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.drawer-foot button:hover {
+  background: #e8eaed;
+  border-color: rgba(26, 35, 50, 0.16);
+  color: var(--ink);
 }
 
 .drawer-foot .primary {
   background: var(--jade);
   border-color: var(--jade);
+  color: #fff;
+}
+
+.drawer-foot .primary:hover {
+  background: var(--jade-deep);
+  border-color: var(--jade-deep);
   color: #fff;
 }
 
