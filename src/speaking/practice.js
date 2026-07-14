@@ -103,6 +103,7 @@ export function bootSpeaking(root, opts) {
     saveJSON(`${storagePrefix}-lesson`, state.lesson)
     state.index = 0
     state.results = []
+    state.fullResult = null
     persistResults()
     state.manualText = ''
     state.transcript = ''
@@ -184,7 +185,10 @@ export function bootSpeaking(root, opts) {
     speaking: false,
     paused: false,
     index: 0,
+    /** @type {'line' | 'article'} */
+    scope: 'line',
     results: /** @type {any[]} */ (loadJSON(`${storagePrefix}-results`, [])),
+    fullResult: /** @type {any | null} */ (loadJSON(`${storagePrefix}-full-result`, null)),
     manualText: '',
     grading: false,
     gradeError: '',
@@ -216,7 +220,7 @@ export function bootSpeaking(root, opts) {
       state.listening = listening
       state.srError = error
       patchLive()
-      if (!listening && transcript && !state.grading && !state.results[state.index]) {
+      if (!listening && transcript && !state.grading && !activeFeedback()) {
         runGrade(transcript)
       }
     },
@@ -226,8 +230,25 @@ export function bootSpeaking(root, opts) {
     return sentences()[state.index] || ''
   }
 
+  /** Original text to match against for the current practice scope. */
+  function gradeTarget() {
+    if (state.scope === 'article') return String(state.lesson.article || '').trim()
+    return currentSentence()
+  }
+
+  function activeFeedback() {
+    return state.scope === 'article' ? state.fullResult : state.results[state.index]
+  }
+
   function persistResults() {
     saveJSON(`${storagePrefix}-results`, state.results)
+    saveJSON(`${storagePrefix}-full-result`, state.fullResult)
+  }
+
+  function clearActiveFeedback() {
+    if (state.scope === 'article') state.fullResult = null
+    else state.results[state.index] = undefined
+    persistResults()
   }
 
   async function runGrade(transcript) {
@@ -241,12 +262,27 @@ export function bootSpeaking(root, opts) {
       render()
       return
     }
+    const original = gradeTarget()
+    if (!original) {
+      state.gradeError = t('No article text to compare.', '比較する文章がありません。', '没有可对比的原文。')
+      render()
+      return
+    }
     state.grading = true
     state.gradeError = ''
     render()
     try {
-      const result = await gradeRepeat(language, currentSentence(), transcript)
-      state.results[state.index] = { ...result, transcript, sentence: currentSentence() }
+      const result = await gradeRepeat(language, original, transcript)
+      const packed = {
+        ...result,
+        transcript,
+        sentence: original,
+        original,
+        scope: state.scope,
+        diff: buildSpeakDiff(original, transcript, language),
+      }
+      if (state.scope === 'article') state.fullResult = packed
+      else state.results[state.index] = packed
       persistResults()
     } catch {
       state.gradeError =
@@ -261,6 +297,19 @@ export function bootSpeaking(root, opts) {
     }
   }
 
+  function setScope(scope) {
+    const next = scope === 'article' ? 'article' : 'line'
+    if (state.scope === next) return
+    stopArticle()
+    recognizer.stop()
+    state.scope = next
+    state.manualText = ''
+    state.gradeError = ''
+    state.transcript = ''
+    recognizer.reset()
+    render()
+  }
+
   function nextLesson() {
     cancelSpeech()
     recognizer.stop()
@@ -270,7 +319,9 @@ export function bootSpeaking(root, opts) {
     state.lesson = chooseLesson(recent)
     saveJSON(`${storagePrefix}-lesson`, state.lesson)
     state.results = []
+    state.fullResult = null
     saveJSON(`${storagePrefix}-results`, [])
+    saveJSON(`${storagePrefix}-full-result`, null)
     state.index = 0
     state.manualText = ''
     state.gradeError = ''
@@ -536,11 +587,11 @@ export function bootSpeaking(root, opts) {
   }
 
   function feedbackHtml() {
-    const fb = state.results[state.index]
+    const fb = activeFeedback()
     if (!fb) {
       return `<div class="spk-feedback-slot" aria-hidden="true"></div>`
     }
-    const original = fb.original || fb.sentence || currentSentence()
+    const original = fb.original || fb.sentence || gradeTarget()
     const heard = fb.transcript || ''
     const diff =
       fb.diff ||
@@ -553,9 +604,11 @@ export function bootSpeaking(root, opts) {
           <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
           <p class="spk-summary">${escapeHtml(fb.summary)}</p>
           <p class="spk-section-label">${t(
-            'Compare original & heard',
-            '原文と認識結果の比較',
-            '原文与识别对比',
+            state.scope === 'article'
+              ? 'Compare full article & heard'
+              : 'Compare original & heard',
+            state.scope === 'article' ? '全文と認識結果の比較' : '原文と認識結果の比較',
+            state.scope === 'article' ? '全文与识别对比' : '原文与识别对比',
           )}</p>
           <div class="spk-diff" lang="${language}">
             <div class="spk-diff-row">
@@ -627,6 +680,7 @@ export function bootSpeaking(root, opts) {
       ? state.results.reduce((sum, r) => sum + (r ? r.rating : 0), 0) / gradedCount
       : 0
     const ttsOk = 'speechSynthesis' in window
+    const isFull = state.scope === 'article'
     // Paint plaintext immediately — Japanese furigana is applied asynchronously
     // so the article never looks empty while Kuroshiro initializes.
     const articleBody = articleHtmlSync()
@@ -662,23 +716,41 @@ export function bootSpeaking(root, opts) {
               <div class="spk-listen">${listenControlsHtml()}</div>
 
               <div class="spk-practice">
+                <div class="spk-scope" role="tablist" aria-label="${t('Practice scope', '練習範囲', '练习范围')}">
+                  <button type="button" class="ghost-chip ${!isFull ? 'is-active' : ''}" id="spk-scope-line" role="tab" aria-selected="${!isFull}">
+                    ${t('By line', '一文ずつ', '逐句')}
+                  </button>
+                  <button type="button" class="ghost-chip ${isFull ? 'is-active' : ''}" id="spk-scope-article" role="tab" aria-selected="${isFull}">
+                    ${t('Full article', '全文', '全文')}
+                  </button>
+                </div>
                 <div class="spk-repeat-head">
                   <h2>${
-                    t(
-                      'Your turn — repeat the highlighted line',
-                      'ハイライトの文を声に出して繰り返す',
-                      '请跟读高亮句子',
-                    )
+                    isFull
+                      ? t(
+                          'Your turn — read the whole article',
+                          '全文を声に出して読む',
+                          '请朗读整篇文章',
+                        )
+                      : t(
+                          'Your turn — repeat the highlighted line',
+                          'ハイライトの文を声に出して繰り返す',
+                          '请跟读高亮句子',
+                        )
                   }</h2>
                   <div class="spk-repeat-meta">
                     ${
-                      ttsOk
+                      ttsOk && !isFull
                         ? `<button type="button" class="icon-btn" id="spk-line" title="${
                             t('Hear this line', 'この行を聴く', '听这一句')
                           }">🔊</button>`
                         : ''
                     }
-                    <span class="spk-counter">${state.index + 1} / ${sents.length} ${t('Line', '行', '句')}</span>
+                    <span class="spk-counter">${
+                      isFull
+                        ? t('Full article', '全文', '全文')
+                        : `${state.index + 1} / ${sents.length} ${t('Line', '行', '句')}`
+                    }</span>
                   </div>
                 </div>
 
@@ -728,11 +800,13 @@ export function bootSpeaking(root, opts) {
                 ${feedbackHtml()}
 
                 ${
-                  gradedCount
-                    ? `<p class="spk-avg">${
-                        t('Session average', '平均', '平均分')
-                      }: ${avg.toFixed(1)}/5 · ${gradedCount}/${sents.length}</p>`
-                    : ''
+                  isFull && state.fullResult
+                    ? `<p class="spk-avg">${t('Full article score', '全文スコア', '全文得分')}: ${state.fullResult.rating}/5</p>`
+                    : !isFull && gradedCount
+                      ? `<p class="spk-avg">${
+                          t('Session average', '平均', '平均分')
+                        }: ${avg.toFixed(1)}/5 · ${gradedCount}/${sents.length}</p>`
+                      : ''
                 }
               </div>
               </div>
@@ -947,6 +1021,8 @@ export function bootSpeaking(root, opts) {
     root.querySelector('#set-speak-min-count')?.addEventListener('change', (e) => {
       applySpeakLimitPatch({ speakMinCount: Number(e.target.value) || (language === 'en' ? 40 : 60) })
     })
+    root.querySelector('#spk-scope-line')?.addEventListener('click', () => setScope('line'))
+    root.querySelector('#spk-scope-article')?.addEventListener('click', () => setScope('article'))
     root.querySelector('#spk-line')?.addEventListener('click', () => {
       speakText(currentSentence(), language, state.rate)
     })
@@ -958,9 +1034,10 @@ export function bootSpeaking(root, opts) {
         recognizer.stop()
         return
       }
+      // Stop article / line pronunciation so recording isn't competing with TTS
+      stopArticle()
       state.gradeError = ''
-      state.results[state.index] = undefined
-      persistResults()
+      clearActiveFeedback()
       const fb = root.querySelector('.spk-feedback')
       fb?.remove()
       syncArticlePaneHeight()
