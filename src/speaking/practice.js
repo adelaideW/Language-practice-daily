@@ -4,7 +4,7 @@
  */
 
 import { gradeRepeat, buildSpeakDiff } from './grade.js'
-import { pickLesson } from './lessons.js'
+import { pickLesson, builtInSpeakBank } from './lessons.js'
 import { fitLessonToSpeakLimit } from './length.js'
 import {
   speakText,
@@ -79,18 +79,27 @@ export function bootSpeaking(root, opts) {
           : saveEnglishSettings({ speakOnSentenceClick: checked })
   }
 
-  function applySpeakLimitPatch(patch) {
-    settings =
-      language === 'ja'
-        ? saveJapaneseSettings(patch)
-        : language === 'zh'
-          ? saveSettings(patch)
-          : saveEnglishSettings(patch)
+  function defaultSpeakCount(kind) {
+    if (language === 'en') return kind === 'min' ? 40 : 150
+    return kind === 'min' ? 60 : 200
+  }
+
+  /** Other bank articles used to grow short seeds up to the min limit. */
+  function speakFillers(avoidTitle = '') {
+    return builtInSpeakBank(language).filter((l) => l.title !== avoidTitle)
+  }
+
+  function refitCurrentLesson() {
     const source = {
       ...state.lesson,
-      article: state.lesson.sourceArticle || state.lesson.article,
+      article: state.lesson.baseArticle || state.lesson.sourceArticle || state.lesson.article,
     }
-    state.lesson = fitLessonToSpeakLimit(source, language, settings)
+    state.lesson = fitLessonToSpeakLimit(
+      source,
+      language,
+      settings,
+      speakFillers(source.title),
+    )
     saveJSON(`${storagePrefix}-lesson`, state.lesson)
     state.index = 0
     state.results = []
@@ -98,16 +107,58 @@ export function bootSpeaking(root, opts) {
     state.manualText = ''
     state.transcript = ''
     state.gradeError = ''
+  }
+
+  function applySpeakLimitPatch(patch) {
+    settings =
+      language === 'ja'
+        ? saveJapaneseSettings(patch)
+        : language === 'zh'
+          ? saveSettings(patch)
+          : saveEnglishSettings(patch)
+    refitCurrentLesson()
+    render()
+  }
+
+  /** Read length fields from the open settings drawer (covers blurless Done clicks). */
+  function readSpeakLimitFromDrawer() {
+    const modeEl = root.querySelector('input[name="speak-limit-mode"]:checked')
+    const mode = modeEl?.value === 'count' ? 'count' : 'time'
+    return {
+      speakLimitMode: mode,
+      speakMinMinutes: Number(root.querySelector('#set-speak-min-minutes')?.value) || 1,
+      speakMaxMinutes: Number(root.querySelector('#set-speak-minutes')?.value) || 5,
+      speakMinCount: Number(root.querySelector('#set-speak-min-count')?.value) || defaultSpeakCount('min'),
+      speakMaxCount: Number(root.querySelector('#set-speak-count')?.value) || defaultSpeakCount('max'),
+    }
+  }
+
+  function closeSettingsApplyingLimits() {
+    if (state.drawer === 'settings') {
+      const patch = readSpeakLimitFromDrawer()
+      settings =
+        language === 'ja'
+          ? saveJapaneseSettings(patch)
+          : language === 'zh'
+            ? saveSettings(patch)
+            : saveEnglishSettings(patch)
+      state.drawer = null
+      refitCurrentLesson()
+      render()
+      return
+    }
+    state.drawer = null
     render()
   }
 
   function chooseLesson(avoidTitles = []) {
-    return fitLessonToSpeakLimit(pickLesson(language, avoidTitles), language, settings)
+    const picked = pickLesson(language, avoidTitles)
+    return fitLessonToSpeakLimit(picked, language, settings, speakFillers(picked.title))
   }
 
   function lessonHasArticle(raw) {
     if (!raw || typeof raw !== 'object') return false
-    const text = String(raw.sourceArticle || raw.article || raw.text || '').trim()
+    const text = String(raw.baseArticle || raw.sourceArticle || raw.article || raw.text || '').trim()
     return text.length > 0
   }
 
@@ -121,9 +172,9 @@ export function bootSpeaking(root, opts) {
     // Re-fit to current length settings; tolerate legacy { text } shape
     const source = {
       ...lesson,
-      article: lesson.sourceArticle || lesson.article || lesson.text || '',
+      article: lesson.baseArticle || lesson.sourceArticle || lesson.article || lesson.text || '',
     }
-    lesson = fitLessonToSpeakLimit(source, language, settings)
+    lesson = fitLessonToSpeakLimit(source, language, settings, speakFillers(source.title))
     saveJSON(`${storagePrefix}-lesson`, lesson)
   }
 
@@ -785,7 +836,11 @@ export function bootSpeaking(root, opts) {
               <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
               <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
             </label>
-            <p class="drawer-lead">${t('Applies on Next lesson.', '「次のレッスン」で反映されます。', '点「下一篇」后生效。')}</p>
+            <p class="drawer-lead">${t(
+              'Takes effect when you press Done.',
+              '「完了」を押すと反映されます。',
+              '点「完成」后立即生效。',
+            )}</p>
           </section>
         </div>
         <div class="drawer-foot">
@@ -858,13 +913,11 @@ export function bootSpeaking(root, opts) {
       render()
     })
     root.querySelector('#drawer-backdrop')?.addEventListener('click', () => {
-      state.drawer = null
-      render()
+      closeSettingsApplyingLimits()
     })
     root.querySelectorAll('#btn-close-drawer').forEach((btn) =>
       btn.addEventListener('click', () => {
-        state.drawer = null
-        render()
+        closeSettingsApplyingLimits()
       }),
     )
     root.querySelector('#set-speak-sentence')?.addEventListener('change', (e) => {

@@ -1,6 +1,7 @@
 /**
  * Fit speaking lessons to time OR count limit (mutually exclusive modes).
- * Max caps length; min floors it when the source article is long enough.
+ * Max caps length; min floors it, appending filler passages when the seed is short
+ * (needed for short Chinese poems / quotes).
  */
 
 import { countEnglishWords } from '../english/data.js'
@@ -82,7 +83,7 @@ export function trimSpeakText(text, language, budget) {
 }
 
 /**
- * Grow to at least `minBudget` (capped by source length), preferring sentence boundaries.
+ * Grow to at least `minBudget` within a single source (no fillers).
  * @param {string} text
  * @param {'en' | 'ja' | 'zh'} language
  * @param {number} minBudget
@@ -105,7 +106,32 @@ export function ensureMinSpeakText(text, language, minBudget) {
 }
 
 /**
- * @param {{ article: string, estimatedMinutes?: number, [k: string]: any }} lesson
+ * @param {string} left
+ * @param {string} right
+ * @param {'en' | 'ja' | 'zh'} language
+ */
+function joinSpeakParts(left, right, language) {
+  const a = String(left || '').trim()
+  const b = String(right || '').trim()
+  if (!a) return b
+  if (!b) return a
+  if (language === 'en') return `${a} ${b}`
+  if (language === 'zh') return `${a}${/[。！？\n]$/.test(a) ? '' : '。'}${b}`
+  return `${a}\n\n${b}`
+}
+
+/**
+ * @param {unknown} item
+ */
+function fillerText(item) {
+  if (typeof item === 'string') return item.trim()
+  if (!item || typeof item !== 'object') return ''
+  const o = /** @type {{ article?: string, text?: string, sourceArticle?: string }} */ (item)
+  return String(o.sourceArticle || o.article || o.text || '').trim()
+}
+
+/**
+ * @param {{ article?: string, sourceArticle?: string, baseArticle?: string, estimatedMinutes?: number, [k: string]: any }} lesson
  * @param {'en' | 'ja' | 'zh'} language
  * @param {{
  *   speakLimitMode?: SpeakLimitMode,
@@ -114,8 +140,10 @@ export function ensureMinSpeakText(text, language, minBudget) {
  *   speakMinMinutes?: number,
  *   speakMinCount?: number,
  * }} settings
+ * @param {Array<string | { article?: string, text?: string, sourceArticle?: string }>} [fillers]
+ *   Extra passages to append when the seed article is shorter than min.
  */
-export function fitLessonToSpeakLimit(lesson, language, settings) {
+export function fitLessonToSpeakLimit(lesson, language, settings, fillers = []) {
   const mode = settings.speakLimitMode === 'count' ? 'count' : 'time'
   const defaultMaxCount = language === 'en' ? 150 : 200
   const defaultMinCount = language === 'en' ? 40 : 60
@@ -130,27 +158,44 @@ export function fitLessonToSpeakLimit(lesson, language, settings) {
       : speakBudgetFromMinutes(language, settings.speakMinMinutes || 1)
   if (minBudget > maxBudget) minBudget = maxBudget
 
-  const source = lesson.sourceArticle || lesson.article || ''
-  let article = trimSpeakText(source, language, maxBudget)
-  if (speakMeasure(article, language) < minBudget) {
-    article = ensureMinSpeakText(source, language, minBudget)
-    if (speakMeasure(article, language) > maxBudget) {
-      article = trimSpeakText(article, language, maxBudget)
+  const baseSource = String(
+    lesson.baseArticle || lesson.sourceArticle || lesson.article || '',
+  ).trim()
+
+  const extras = fillers
+    .map(fillerText)
+    .filter((t) => t && t !== baseSource)
+  const cycle = extras.length ? [...extras, baseSource].filter(Boolean) : baseSource ? [baseSource] : []
+
+  let article = baseSource
+  let guard = 0
+  let idx = 0
+  while (speakMeasure(article, language) < minBudget && cycle.length && guard < 50) {
+    const chunk = cycle[idx % cycle.length]
+    idx += 1
+    guard += 1
+    if (!chunk) continue
+    if (!article) {
+      article = chunk
+      continue
     }
+    article = joinSpeakParts(article, chunk, language)
+  }
+
+  if (speakMeasure(article, language) > maxBudget) {
+    article = trimSpeakText(article, language, maxBudget)
   }
 
   const measure = speakMeasure(article, language)
   const estimatedMinutes =
     mode === 'time'
-      ? Math.max(
-          1,
-          Math.min(30, Number(settings.speakMaxMinutes) || 5),
-        )
+      ? Math.max(1, Math.min(30, Number(settings.speakMaxMinutes) || 5))
       : Math.max(1, Math.ceil(measure / (language === 'en' ? 140 : 220)))
 
   return {
     ...lesson,
-    sourceArticle: source,
+    baseArticle: baseSource,
+    sourceArticle: baseSource,
     article,
     estimatedMinutes,
     speakMeasure: measure,
