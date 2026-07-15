@@ -1431,16 +1431,39 @@ body::before {
   }
 }
 
+.english-passage {
+  font-size: 1.05rem;
+  line-height: 1.75;
+  letter-spacing: normal;
+  word-spacing: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+  white-space: normal;
+  color: var(--ink);
+}
+
+.english-passage .ch {
+  padding: 0;
+  margin: 0;
+  border-radius: 0.15em;
+}
+
 .english-passage .ch-space {
-  color: var(--muted);
-  opacity: 0.55;
-  display: inline-block;
-  min-width: 0.35em;
+  color: inherit;
+  opacity: 1;
+  display: inline;
+  min-width: 0;
 }
 
 .english-passage .ch.current.ch-space {
   opacity: 1;
   color: var(--jade-deep);
+  background: var(--jade-soft);
+  box-shadow: inset 0 -2px 0 var(--jade);
+}
+
+.english-passage .ch.done {
+  color: var(--muted);
 }
 
 .track-switch {

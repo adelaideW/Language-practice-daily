@@ -902,7 +902,10 @@ export function bootEnglish(root) {
         if (doneIndexes.has(i)) classes.push('done')
         if (i === currentIndex) classes.push('current')
         if (ch === ' ') classes.push('ch-space')
-        const shown = ch === ' ' ? '·' : escapeHtml(ch)
+        if (ch === '\n') classes.push('ch-break')
+        // Keep spaces as normal spaces so the passage reads like an article
+        if (ch === '\n') return `<br class="${classes.join(' ')}" data-i="${i}" />`
+        const shown = ch === ' ' ? ' ' : escapeHtml(ch)
         return `<span class="${classes.join(' ')}" data-i="${i}">${shown}</span>`
       })
       .join('')
@@ -940,7 +943,7 @@ export function bootEnglish(root) {
             : ''
         }
         <div class="passage-scroll">
-          <div class="passage poem english-passage">${chars}</div>
+          <div class="passage english-passage">${chars}</div>
         </div>
         <div class="typing-chrome">
           <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
