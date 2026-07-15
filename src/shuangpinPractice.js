@@ -912,7 +912,8 @@ function scrollCurrentIntoView() {
 function onWrongKey(typed) {
   const target = currentTarget()
   const expectedCode = currentCode()
-  if (target) {
+  // Punctuation / space errors still count for accuracy, but are not saved to 错字本.
+  if (target && target.kind !== 'punct' && target.kind !== 'space') {
     recordMistake({
       char: target.char,
       pinyin: target.pinyin,

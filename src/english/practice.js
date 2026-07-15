@@ -620,7 +620,13 @@ export function bootEnglish(root) {
 
   function onWrongKey(typed) {
     const target = currentTarget()
-    if (target && state.passage) {
+    // Punctuation / space errors still count for accuracy, but are not saved to Mistakes.
+    if (
+      target &&
+      state.passage &&
+      !isTypablePunct(target.char) &&
+      !isTypableSpace(target.char)
+    ) {
       const word = wordAroundIndex(state.passage.text, target.index)
       recordEnglishMistake({
         word,

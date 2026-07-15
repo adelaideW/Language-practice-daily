@@ -681,7 +681,8 @@ export function bootJapanese(root) {
 
   function onWrong(typed) {
     const t = currentTarget()
-    if (t) {
+    // Punctuation / space errors still count for accuracy, but are not saved to ミス帳.
+    if (t && t.kind !== 'punct' && t.kind !== 'space') {
       recordJapaneseMistake({
         surface: t.surface,
         kana: hintHiragana(t.kana),
