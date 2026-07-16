@@ -2947,18 +2947,46 @@ button.scheme-btn:focus-visible {
   /* Speaking: keep listen/speak controls reachable on a short phone screen */
   .spk-top-line-nav {
     display: inline-flex;
+    gap: 0.15rem;
   }
 
   .spk-listen-compact {
     display: inline-flex;
+    gap: 0.15rem;
   }
 
   .spk-top-actions {
-    gap: 0.28rem;
+    width: 100%;
+    gap: 0.2rem;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+  }
+
+  .spk-listen-compact .spk-rate {
+    margin-left: 0;
+  }
+
+  .spk-listen-compact .spk-rate select {
+    width: 3.5rem;
+    padding-inline: 0.2rem;
+  }
+
+  .spk-top-actions .minutes-chip {
+    display: none;
+  }
+
+  .spk-top-counter {
+    margin-left: auto;
+    font-size: 0.75rem;
+    white-space: nowrap;
   }
 
   .spk-top-actions #spk-open-settings {
     display: none !important;
+  }
+
+  .spk-repeat-head {
+    display: none;
   }
 
   .spk-side .spk-practice {

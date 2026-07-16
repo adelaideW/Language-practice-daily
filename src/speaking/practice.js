@@ -968,6 +968,11 @@ export function bootSpeaking(root, opts) {
                 ? `<div class="spk-listen spk-listen-compact">${listenHtml}</div>`
                 : ''
             }
+            ${
+              phone
+                ? `<span class="spk-counter spk-top-counter">${state.index + 1}/${sents.length} ${t('Line', '行', '句')}</span>`
+                : ''
+            }
             <button type="button" class="ghost-chip" id="spk-open-settings">${
               t('Settings', '設定', '设置')
             }</button>
