@@ -2243,6 +2243,27 @@ button.scheme-btn:focus-visible {
   padding-bottom: 0.15rem;
 }
 
+.spk-listen-compact {
+  display: none;
+  flex-wrap: nowrap;
+  gap: 0.28rem;
+  padding-bottom: 0;
+  margin-left: 0;
+}
+
+.spk-listen-compact .spk-rate {
+  margin-left: 0.15rem;
+}
+
+.spk-listen-compact .spk-rate span {
+  display: none;
+}
+
+.spk-listen-icon:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .spk-listen .ghost-chip:disabled,
 .spk-nav .ghost-chip:disabled {
   opacity: 0.45;
@@ -2276,15 +2297,7 @@ button.scheme-btn:focus-visible {
 }
 
 .spk-scope {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.spk-scope .ghost-chip.is-active {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: #fff;
+  display: none;
 }
 
 .spk-repeat-head {
@@ -2850,8 +2863,7 @@ button.scheme-btn:focus-visible {
   }
 
   .skill-lang-head {
-    margin-left: 0.85rem;
-    margin-right: 0.85rem;
+    margin: 0.85rem 0.85rem 1rem;
   }
 
   .skill-lang-title {
@@ -2933,8 +2945,21 @@ button.scheme-btn:focus-visible {
     display: inline-flex;
   }
 
+  .spk-listen-compact {
+    display: inline-flex;
+  }
+
+  .spk-top-actions {
+    gap: 0.28rem;
+  }
+
   .spk-top-actions #spk-open-settings {
     display: none !important;
+  }
+
+  .spk-side .spk-practice {
+    border-top: 0;
+    padding-top: 0;
   }
 
   .spk-nav {
