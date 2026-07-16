@@ -1471,7 +1471,7 @@ function renderCharacterStage() {
   if (!t) return ''
   const codes = encodeOptions(settings.scheme, t.pinyin)
   return `
-    <div class="char-stage">
+    <div class="char-stage word-stage">
       <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: '跳过', speak: '读音' })}</div>
       <div class="hanzi">${t.char}</div>
       <div class="pinyin-line">${t.pinyin} · ${codes.join(' / ')}</div>

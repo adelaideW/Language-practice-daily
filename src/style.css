@@ -2920,12 +2920,18 @@ button.scheme-btn:focus-visible {
     position: absolute;
     top: 0.75rem;
     right: 0.75rem;
+    z-index: 2;
     display: flex;
     gap: 0.35rem;
   }
 
   .char-stage {
     position: relative;
+    width: 100%;
+  }
+
+  .char-stage.word-stage {
+    padding-top: 2.75rem;
   }
 
   .practice-icon-btn.is-speaking {
