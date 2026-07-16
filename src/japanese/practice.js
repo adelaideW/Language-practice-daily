@@ -34,7 +34,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { enrichPassageWithReadings } from '../speaking/furigana.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
-import { speakText } from '../speaking/speech.js'
+import { speakText, cancelSpeech, isSpeechPlaying } from '../speaking/speech.js'
 import { installViewportKeyboardSync } from '../viewport.js'
 import {
   bindStatsDisclosure,
@@ -46,6 +46,7 @@ import {
   renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
+  syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from '../mobileNav.js'
 
@@ -772,9 +773,29 @@ export function bootJapanese(root) {
     void speakText(t.surface, 'ja', 0.9)
   }
 
-  function speakPassage() {
+  function syncSpeakUi(speaking) {
+    syncPracticeSpeakButtons({
+      speaking,
+      speakLabel: '読み上げ',
+      stopLabel: '停止',
+    })
+  }
+
+  function toggleSpeakPassage() {
+    if (isSpeechPlaying()) {
+      cancelSpeech()
+      syncSpeakUi(false)
+      return
+    }
     if (!state.passage) return
-    void speakText(passageDisplayText(state.passage), 'ja', 0.9)
+    const text = passageDisplayText(state.passage)
+    if (!text.trim()) return
+    syncSpeakUi(true)
+    speakText(text, 'ja', 0.9, () => syncSpeakUi(false))
+  }
+
+  function speakPassage() {
+    toggleSpeakPassage()
   }
 
   function focusApp() {
@@ -1308,6 +1329,7 @@ export function bootJapanese(root) {
     bindEvents()
     bindStatsDisclosure()
     syncModeControl()
+    if (isSpeechPlaying()) syncSpeakUi(true)
     state.drawerJustOpened = false
     requestAnimationFrame(() => {
       document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1366,7 +1388,7 @@ export function bootJapanese(root) {
       })
     })
     document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
-      btn.addEventListener('click', speakPassage)
+      btn.addEventListener('click', toggleSpeakPassage)
     })
     document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
       btn.addEventListener('click', () => {

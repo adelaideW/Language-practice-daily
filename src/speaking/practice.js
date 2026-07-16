@@ -403,9 +403,29 @@ export function bootSpeaking(root, opts) {
 
   function patchListen() {
     const host = root.querySelector('.spk-listen')
-    if (!host) return
-    host.innerHTML = listenControlsHtml()
-    bindListen()
+    if (host) {
+      host.innerHTML = listenControlsHtml()
+      bindListen()
+    }
+    syncArticleSpeakButton()
+  }
+
+  function syncArticleSpeakButton() {
+    const btn = root.querySelector('#spk-article-speak')
+    if (!btn) return
+    const speaking = state.speaking && !state.paused
+    const label = speaking ? t('Stop', '停止', '停止') : t('Listen', '全文を聴く', '听全文')
+    btn.classList.toggle('is-speaking', speaking)
+    btn.setAttribute('aria-label', label)
+    btn.title = label
+    btn.innerHTML = speaking
+      ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7V7Z"/></svg>`
+      : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.9v2.05a2.5 2.5 0 0 1 0 3.7v2.05a4.5 4.5 0 0 0 0-7.8Zm2.5-2.6v2.12a6.5 6.5 0 0 1 0 8.76v2.12a8.5 8.5 0 0 0 0-13Z"/></svg>`
+  }
+
+  function toggleArticleSpeak() {
+    if (state.speaking && !state.paused) stopArticle()
+    else playArticle()
   }
 
   function patchLive() {
@@ -807,11 +827,25 @@ export function bootSpeaking(root, opts) {
           </div>
           <div class="spk-top-actions">
             <span class="minutes-chip">~${state.lesson.estimatedMinutes || 5} min</span>
-            <button type="button" class="ghost-chip" id="spk-open-settings">${
-              t('Settings', '設定', '设置')
-            }</button>
+            ${
+              isPhoneViewport()
+                ? `<div class="spk-top-line-nav" role="group" aria-label="${t('Line', '行', '句')}">
+              <button type="button" class="practice-icon-btn spk-icon-nav" id="spk-prev" ${state.index === 0 ? 'disabled' : ''} aria-label="${t('Previous', '前の行', '上一句')}" title="${t('Previous', '前の行', '上一句')}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 5.5 9 12l6.5 6.5 1.4-1.4L11.8 12l5.1-5.1-1.4-1.4Z"/></svg>
+              </button>
+              <button type="button" class="practice-icon-btn spk-icon-nav" id="spk-next-line" ${
+                state.index >= sents.length - 1 ? 'disabled' : ''
+              } aria-label="${t('Next line', '次の行', '下一句')}" title="${t('Next line', '次の行', '下一句')}">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.5 5.5 6.5 6.5-6.5 6.5-1.4-1.4L12.2 12 7.1 6.9l1.4-1.4Z"/></svg>
+              </button>
+            </div>`
+                : ''
+            }
             <button type="button" class="ghost-chip" id="spk-next">${
               t('Another article', '別の記事', '换一篇')
+            }</button>
+            <button type="button" class="ghost-chip" id="spk-open-settings">${
+              t('Settings', '設定', '设置')
             }</button>
           </div>
         </header>
@@ -819,6 +853,25 @@ export function bootSpeaking(root, opts) {
         <section class="practice-card spk-card">
           <div class="spk-layout">
             <div class="spk-article-pane">
+              ${
+                ttsOk
+                  ? `<button type="button" class="spk-article-speak ${state.speaking && !state.paused ? 'is-speaking' : ''}" id="spk-article-speak" aria-label="${
+                      state.speaking && !state.paused
+                        ? t('Stop', '停止', '停止')
+                        : t('Listen', '全文を聴く', '听全文')
+                    }" title="${
+                      state.speaking && !state.paused
+                        ? t('Stop', '停止', '停止')
+                        : t('Listen', '全文を聴く', '听全文')
+                    }">
+                      ${
+                        state.speaking && !state.paused
+                          ? `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7V7Z"/></svg>`
+                          : `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.9v2.05a2.5 2.5 0 0 1 0 3.7v2.05a4.5 4.5 0 0 0 0-7.8Zm2.5-2.6v2.12a6.5 6.5 0 0 1 0 8.76v2.12a8.5 8.5 0 0 0 0-13Z"/></svg>`
+                      }
+                    </button>`
+                  : ''
+              }
               <div class="spk-article${language === 'ja' && settings.speakShowHiragana ? ' has-furigana' : ''}" lang="${language}">${articleBody}</div>
             </div>
 
@@ -922,14 +975,18 @@ export function bootSpeaking(root, opts) {
               </div>
               </div>
               <div class="spk-nav">
-                <button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
+                ${
+                  isPhoneViewport()
+                    ? ''
+                    : `<button type="button" class="ghost-chip" id="spk-prev" ${state.index === 0 ? 'disabled' : ''}>
                   ← ${t('Previous', '前の行', '上一句')}
                 </button>
                 <button type="button" class="ghost-chip" id="spk-next-line" ${
                   state.index >= sents.length - 1 ? 'disabled' : ''
                 }>
                   ${t('Next line', '次の行', '下一句')} →
-                </button>
+                </button>`
+                }
               </div>
             </aside>
           </div>
@@ -994,6 +1051,7 @@ export function bootSpeaking(root, opts) {
     root.querySelector('#spk-play')?.addEventListener('click', playArticle)
     root.querySelector('#spk-pause')?.addEventListener('click', pauseArticle)
     root.querySelector('#spk-stop')?.addEventListener('click', stopArticle)
+    root.querySelector('#spk-article-speak')?.addEventListener('click', toggleArticleSpeak)
     root.querySelector('#spk-rate')?.addEventListener('change', (e) => {
       state.rate = Number(e.target.value) || 1
     })

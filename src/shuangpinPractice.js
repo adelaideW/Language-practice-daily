@@ -30,7 +30,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
 import { installViewportKeyboardSync } from './viewport.js'
-import { speakText } from './speaking/speech.js'
+import { speakText, cancelSpeech, isSpeechPlaying } from './speaking/speech.js'
 import {
   bindStatsDisclosure,
   consumePendingDrawer,
@@ -41,6 +41,7 @@ import {
   renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
+  syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from './mobileNav.js'
 
@@ -1037,6 +1038,38 @@ function speakCurrent() {
   void speakText(t.char, 'zh', 0.9)
 }
 
+function speakLabel() {
+  return state.mode === 'character' ? '读音' : '朗读'
+}
+
+function syncSpeakUi(speaking) {
+  syncPracticeSpeakButtons({
+    speaking,
+    speakLabel: speakLabel(),
+    stopLabel: '停止',
+  })
+}
+
+/** Read aloud current char (character mode) or the full passage; tap again to stop. */
+function toggleSpeakAloud() {
+  if (isSpeechPlaying()) {
+    cancelSpeech()
+    syncSpeakUi(false)
+    return
+  }
+  let text = ''
+  if (state.mode === 'character') {
+    const t = currentTarget()
+    if (!t) return
+    text = t.char
+  } else {
+    text = state.passage?.text || ''
+  }
+  if (!text.trim()) return
+  syncSpeakUi(true)
+  speakText(text, 'zh', 0.9, () => syncSpeakUi(false))
+}
+
 function focusApp() {
   if (state.drawer) return
   const mirror = document.querySelector('#key-mirror')
@@ -1560,11 +1593,11 @@ function render() {
         : ''
 
   const mistakeCount = loadMistakes().length
-  const speakLabel = state.mode === 'character' ? '读音' : '朗读'
+  const speakLabelText = speakLabel()
   const speakHint =
     state.mode === 'character'
       ? '<span><kbd>读音</kbd> 按钮听当前字</span>'
-      : '<span><kbd>朗读</kbd> 按钮读当前字</span>'
+      : '<span><kbd>朗读</kbd> 按钮读整篇</span>'
 
   // Phone: Mistakes / Settings replace the practice tree — nothing left to scroll behind.
   if (state.drawer && isPhoneViewport()) {
@@ -1600,7 +1633,7 @@ function render() {
       </section>
       <div class="toolbar">
         <button type="button" id="btn-skip">跳过</button>
-        <button type="button" id="btn-speak">${speakLabel}</button>
+        <button type="button" id="btn-speak">${speakLabelText}</button>
         <button type="button" id="btn-reset" data-reset-stats>重置统计</button>
         <button type="button" id="btn-hints" class="keyboard-option-control">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
         <button type="button" id="kb-toggle" class="keyboard-option-control">${settings.keyboardCovered ? '显示键盘' : '遮盖键盘'}</button>
@@ -1614,6 +1647,7 @@ function render() {
   bindEvents()
   bindStatsDisclosure()
   syncModeControl()
+  if (isSpeechPlaying()) syncSpeakUi(true)
   state.drawerJustOpened = false
   requestAnimationFrame(() => {
     document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1693,7 +1727,7 @@ function bindEvents() {
   })
 
   document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
-    btn.addEventListener('click', speakCurrent)
+    btn.addEventListener('click', toggleSpeakAloud)
   })
 
   document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
@@ -1769,6 +1803,7 @@ function bindEvents() {
     if (state.mode === 'character') nextCharacter()
     else startPassage(state.mode)
     render()
+    syncBottomTabActive()
     focusApp()
   })
 

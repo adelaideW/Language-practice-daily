@@ -33,7 +33,7 @@ import { isTypablePunct, punctTypingKey, isTypableSpace } from '../punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
-import { speakText } from '../speaking/speech.js'
+import { speakText, cancelSpeech, isSpeechPlaying } from '../speaking/speech.js'
 import { installViewportKeyboardSync } from '../viewport.js'
 import {
   bindStatsDisclosure,
@@ -45,6 +45,7 @@ import {
   renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
+  syncPracticeSpeakButtons,
   wrapCollapsibleStats,
 } from '../mobileNav.js'
 
@@ -752,9 +753,27 @@ export function bootEnglish(root) {
     void speakText(t.char === ' ' ? 'space' : t.char, 'en', 1)
   }
 
+  function syncSpeakUi(speaking) {
+    syncPracticeSpeakButtons({
+      speaking,
+      speakLabel: 'Read aloud',
+      stopLabel: 'Stop',
+    })
+  }
+
+  function toggleSpeakPassage() {
+    if (isSpeechPlaying()) {
+      cancelSpeech()
+      syncSpeakUi(false)
+      return
+    }
+    if (!state.passage?.text) return
+    syncSpeakUi(true)
+    speakText(state.passage.text, 'en', 0.95, () => syncSpeakUi(false))
+  }
+
   function speakPassage() {
-    if (!state.passage) return
-    void speakText(state.passage.text, 'en', 0.95)
+    toggleSpeakPassage()
   }
 
   function focusApp() {
@@ -1353,6 +1372,7 @@ export function bootEnglish(root) {
     bindEvents()
     bindStatsDisclosure()
     syncModeControl()
+    if (isSpeechPlaying()) syncSpeakUi(true)
     state.drawerJustOpened = false
     requestAnimationFrame(() => {
       document.querySelector('.practice-card')?.classList.remove('enter')
@@ -1393,7 +1413,7 @@ export function bootEnglish(root) {
       })
     })
     document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
-      btn.addEventListener('click', speakPassage)
+      btn.addEventListener('click', toggleSpeakPassage)
     })
     document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1453,6 +1473,7 @@ export function bootEnglish(root) {
       state.historyIndex = -1
       startPassage(state.mode)
       render()
+      syncBottomTabActive()
       focusApp()
     })
 

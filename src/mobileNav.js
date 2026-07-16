@@ -378,9 +378,35 @@ export function renderMobilePracticeActions(labels) {
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5-9-6.5Zm10 0v13h2v-13h-2Z"/></svg>
     </button>
     <button type="button" class="practice-icon-btn mobile-practice-action" data-practice-speak aria-label="${labels.speak}" title="${labels.speak}">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.9v2.05a2.5 2.5 0 0 1 0 3.7v2.05a4.5 4.5 0 0 0 0-7.8Zm2.5-2.6v2.12a6.5 6.5 0 0 1 0 8.76v2.12a8.5 8.5 0 0 0 0-13Z"/></svg>
+      ${iconSpeak()}
     </button>
   `
+}
+
+function iconSpeak() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.9v2.05a2.5 2.5 0 0 1 0 3.7v2.05a4.5 4.5 0 0 0 0-7.8Zm2.5-2.6v2.12a6.5 6.5 0 0 1 0 8.76v2.12a8.5 8.5 0 0 0 0-13Z"/></svg>`
+}
+
+function iconStop() {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7V7Z"/></svg>`
+}
+
+/**
+ * Update typing speak / stop controls after TTS starts or ends.
+ * @param {{ speaking: boolean, speakLabel: string, stopLabel: string }} opts
+ */
+export function syncPracticeSpeakButtons(opts) {
+  const label = opts.speaking ? opts.stopLabel : opts.speakLabel
+  document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
+    btn.classList.toggle('is-speaking', opts.speaking)
+    btn.setAttribute('aria-label', label)
+    btn.title = label
+    if (btn.hasAttribute('data-practice-speak')) {
+      btn.innerHTML = opts.speaking ? iconStop() : iconSpeak()
+    } else {
+      btn.textContent = label
+    }
+  })
 }
 
 /** @param {boolean} open */

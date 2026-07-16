@@ -42,7 +42,10 @@ export function speakText(text, language, rate = 1, onEnd = null) {
     voices.find((v) => v.lang === utter.lang) ||
     voices.find((v) => v.lang.toLowerCase().startsWith(prefix))
   if (match) utter.voice = match
-  if (onEnd) utter.onend = onEnd
+  if (onEnd) {
+    utter.onend = onEnd
+    utter.onerror = onEnd
+  }
   window.speechSynthesis.speak(utter)
   return utter
 }

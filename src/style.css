@@ -829,6 +829,13 @@ button.scheme-btn:focus-visible {
   transform: scale(0.94);
 }
 
+.practice-icon-btn.is-speaking,
+#btn-speak.is-speaking {
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+  border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+}
+
 .practice-icon-btn svg {
   width: 1rem;
   height: 1rem;
@@ -2083,6 +2090,14 @@ button.scheme-btn:focus-visible {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.spk-top-line-nav {
+  display: none;
+  align-items: center;
+  gap: 0.28rem;
 }
 
 .minutes-chip {
@@ -2113,6 +2128,7 @@ button.scheme-btn:focus-visible {
 }
 
 .spk-article-pane {
+  position: relative;
   width: 100%;
   min-width: 0;
   height: 680px;
@@ -2124,6 +2140,10 @@ button.scheme-btn:focus-visible {
   border-right: 1px solid var(--line);
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
+}
+
+.spk-article-speak {
+  display: none;
 }
 
 .spk-article {
@@ -2905,6 +2925,67 @@ button.scheme-btn:focus-visible {
 
   .char-stage {
     position: relative;
+  }
+
+  .practice-icon-btn.is-speaking {
+    background: var(--jade-soft);
+    color: var(--jade-deep);
+    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
+  }
+
+  /* Speaking: keep listen/speak controls reachable on a short phone screen */
+  .spk-top-line-nav {
+    display: inline-flex;
+  }
+
+  .spk-top-actions #spk-open-settings {
+    display: none !important;
+  }
+
+  .spk-article-pane {
+    position: relative;
+    padding-top: 0.35rem;
+  }
+
+  .spk-article-speak {
+    position: sticky;
+    top: 0.35rem;
+    float: right;
+    z-index: 3;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    margin: 0 0 0.35rem 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: color-mix(in srgb, #ffffff 92%, transparent);
+    color: var(--ink-soft);
+    box-shadow: 0 6px 18px rgba(26, 35, 50, 0.12);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    cursor: pointer;
+  }
+
+  .spk-article-speak svg {
+    width: 1.05rem;
+    height: 1.05rem;
+    fill: currentColor;
+  }
+
+  .spk-article-speak.is-speaking {
+    background: var(--jade-soft);
+    color: var(--jade-deep);
+  }
+
+  .spk-nav {
+    display: none !important;
+  }
+
+  .spk-icon-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
   }
 
   /* Bottom tab bar */
