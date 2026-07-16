@@ -3388,6 +3388,55 @@ button.scheme-btn:focus-visible {
     min-height: 0;
   }
 
+  body.mobile-typing-keyboard-open {
+    overflow: hidden;
+  }
+
+  body.mobile-typing-keyboard-open .main {
+    height: calc(var(--mobile-vvh, 100dvh) - var(--mobile-main-top, 0px) - 0.5rem);
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: 0.5rem;
+  }
+
+  body.mobile-typing-keyboard-open .practice-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  body.mobile-typing-keyboard-open .char-stage.passage-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 0.45rem;
+  }
+
+  body.mobile-typing-keyboard-open .passage-meta {
+    flex: 0 0 auto;
+  }
+
+  body.mobile-typing-keyboard-open .passage-scroll {
+    flex: 1 1 auto;
+    min-height: 5.5rem;
+    max-height: none;
+  }
+
+  body.mobile-typing-keyboard-open .typing-chrome {
+    flex: 0 0 auto;
+    position: sticky;
+    bottom: 0;
+    z-index: 4;
+    margin-top: 0.35rem;
+    padding: 0.55rem 0 0;
+    background: linear-gradient(180deg, transparent, var(--surface-solid) 24%);
+  }
+
+  body.mobile-typing-keyboard-open .mobile-bottom-nav,
+  body.mobile-typing-keyboard-open .footer-note {
+    display: none !important;
+  }
+
   .hints-row-bottom {
     display: none;
   }

@@ -29,7 +29,7 @@ import { punctTypingKey, isPracticeTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
-import { installViewportKeyboardSync } from './viewport.js'
+import { installMobileTypingViewportSync, installViewportKeyboardSync } from './viewport.js'
 import { speakText, cancelSpeech, isSpeechPlaying } from './speaking/speech.js'
 import {
   bindStatsDisclosure,
@@ -1982,4 +1982,5 @@ export function bootShuangpin(root) {
     () => settings.keyboardCovered,
     (covered) => applySettingsPatch({ keyboardCovered: covered }, { markKeyboardExplicit: false }),
   )
+  installMobileTypingViewportSync()
 }

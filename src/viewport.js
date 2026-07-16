@@ -77,3 +77,48 @@ export function installViewportKeyboardSync(explicitStorageKey, getCovered, setC
     mqH.removeEventListener('change', sync)
   }
 }
+
+/**
+ * Keep mobile typing article layouts inside the visible viewport while the
+ * system keyboard is open. This lets the article pane shrink while the typing
+ * chrome stays visible above the keyboard.
+ */
+export function installMobileTypingViewportSync() {
+  if (typeof window === 'undefined') return () => {}
+  const vv = window.visualViewport
+  const root = document.documentElement
+  const mobileMq = window.matchMedia('(max-width: 573px)')
+
+  const sync = () => {
+    const main = document.querySelector('.main')
+    const mirror = document.querySelector('#key-mirror')
+    const focused = document.activeElement === mirror
+    const viewportHeight = vv?.height || window.innerHeight
+    const keyboardInset = Math.max(0, window.innerHeight - viewportHeight - (vv?.offsetTop || 0))
+    const keyboardOpen = mobileMq.matches && focused && keyboardInset > 80
+
+    root.style.setProperty('--mobile-vvh', `${Math.round(viewportHeight)}px`)
+    root.style.setProperty('--mobile-keyboard-inset', `${Math.round(keyboardInset)}px`)
+    if (main) {
+      root.style.setProperty('--mobile-main-top', `${Math.max(0, Math.round(main.getBoundingClientRect().top))}px`)
+    }
+    document.body.classList.toggle('mobile-typing-keyboard-open', keyboardOpen)
+  }
+
+  const rafSync = () => requestAnimationFrame(sync)
+  vv?.addEventListener('resize', rafSync)
+  vv?.addEventListener('scroll', rafSync)
+  window.addEventListener('resize', rafSync)
+  window.addEventListener('focusin', rafSync)
+  window.addEventListener('focusout', rafSync)
+  sync()
+
+  return () => {
+    vv?.removeEventListener('resize', rafSync)
+    vv?.removeEventListener('scroll', rafSync)
+    window.removeEventListener('resize', rafSync)
+    window.removeEventListener('focusin', rafSync)
+    window.removeEventListener('focusout', rafSync)
+    document.body.classList.remove('mobile-typing-keyboard-open')
+  }
+}

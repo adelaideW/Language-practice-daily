@@ -756,6 +756,7 @@ export function bootSpeaking(root, opts) {
     if (state.grading) {
       body = `<p class="spk-hint spk-feedback-sheet-status">${t('Grading…', '採点中…', '评分中…')}</p>`
     } else if (fb) {
+      const nextClass = Number(fb.rating) >= 5 ? 'primary' : 'ghost-chip'
       body = `
         <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
         <p class="spk-summary">${escapeHtml(fb.summary)}</p>
@@ -767,7 +768,7 @@ export function bootSpeaking(root, opts) {
         </div>
         <div class="spk-feedback-actions">
           <button type="button" class="ghost-chip" id="spk-feedback-retry">${t('Try again', 'もう一度', '再试一次')}</button>
-          <button type="button" class="primary" id="spk-feedback-next" ${canNext ? '' : 'disabled'}>
+          <button type="button" class="${nextClass}" id="spk-feedback-next" ${canNext ? '' : 'disabled'}>
             ${t('Next line', '次の行', '下一句')}
           </button>
         </div>
@@ -1125,6 +1126,12 @@ export function bootSpeaking(root, opts) {
     const active = root.querySelector('.spk-sent.is-active')
     const pane = root.querySelector('.spk-article-pane')
     if (!active || !pane) return
+    const idx = Number(active.getAttribute('data-sent'))
+    const count = sentences().length
+    if (isPhoneViewport() && idx > 0 && idx < count - 1) {
+      active.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+      return
+    }
     const a = active.getBoundingClientRect()
     const p = pane.getBoundingClientRect()
     if (a.top < p.top + 8 || a.bottom > p.bottom - 8) {

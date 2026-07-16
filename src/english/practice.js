@@ -35,7 +35,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText, cancelSpeech, isSpeechPlaying } from '../speaking/speech.js'
-import { installViewportKeyboardSync } from '../viewport.js'
+import { installMobileTypingViewportSync, installViewportKeyboardSync } from '../viewport.js'
 import {
   bindStatsDisclosure,
   consumePendingDrawer,
@@ -1648,4 +1648,5 @@ export function bootEnglish(root) {
     () => settings.keyboardCovered,
     (covered) => applySettingsPatch({ keyboardCovered: covered }, { markKeyboardExplicit: false }),
   )
+  installMobileTypingViewportSync()
 }
