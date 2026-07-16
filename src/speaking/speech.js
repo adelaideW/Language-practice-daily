@@ -25,8 +25,9 @@ function langPrefix(language) {
  * @param {SpeakLang} language
  * @param {number} [rate]
  * @param {(() => void) | null} [onEnd]
+ * @param {{ onBoundary?: (charIndex: number) => void }} [opts]
  */
-export function speakText(text, language, rate = 1, onEnd = null) {
+export function speakText(text, language, rate = 1, onEnd = null, opts = {}) {
   const trimmed = String(text || '').trim()
   if (!trimmed || !('speechSynthesis' in window)) {
     onEnd?.()
@@ -45,6 +46,11 @@ export function speakText(text, language, rate = 1, onEnd = null) {
   if (onEnd) {
     utter.onend = onEnd
     utter.onerror = onEnd
+  }
+  if (typeof opts.onBoundary === 'function') {
+    utter.onboundary = (e) => {
+      if (typeof e.charIndex === 'number') opts.onBoundary(e.charIndex)
+    }
   }
   window.speechSynthesis.speak(utter)
   return utter

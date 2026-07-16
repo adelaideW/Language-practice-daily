@@ -341,20 +341,72 @@ export function bootSpeaking(root, opts) {
       patchListen()
       return
     }
-    startSpeech(state.lesson.article)
+    startSpeech(state.lesson.article, { track: true })
   }
 
-  function startSpeech(text) {
+  function startSpeech(text, { track = false } = {}) {
     const trimmed = String(text || '').trim()
     if (!trimmed) return
     state.speaking = true
     state.paused = false
-    speakText(trimmed, language, state.rate, () => {
-      state.speaking = false
-      state.paused = false
-      patchListen()
-    })
+    const offsets = track ? buildSentenceOffsets(trimmed) : null
+    speakText(
+      trimmed,
+      language,
+      state.rate,
+      () => {
+        state.speaking = false
+        state.paused = false
+        highlightSentence(state.index)
+        patchListen()
+      },
+      offsets
+        ? {
+            onBoundary: (charIndex) => {
+              const idx = sentenceIndexForOffset(offsets, charIndex)
+              if (idx >= 0) highlightSentence(idx)
+            },
+          }
+        : {},
+    )
     patchListen()
+  }
+
+  /** Character start offset of each flattened sentence inside the article text. */
+  function buildSentenceOffsets(articleText) {
+    const list = sentences()
+    const offsets = []
+    let cursor = 0
+    for (const s of list) {
+      const at = articleText.indexOf(s, cursor)
+      if (at === -1) {
+        offsets.push(cursor)
+      } else {
+        offsets.push(at)
+        cursor = at + s.length
+      }
+    }
+    return offsets
+  }
+
+  /** @param {number[]} offsets @param {number} charIndex */
+  function sentenceIndexForOffset(offsets, charIndex) {
+    let idx = -1
+    for (let i = 0; i < offsets.length; i++) {
+      if (charIndex >= offsets[i]) idx = i
+      else break
+    }
+    return idx
+  }
+
+  /** Move the active highlight to a sentence and keep it in view. */
+  function highlightSentence(idx) {
+    const spans = root.querySelectorAll('.spk-sent')
+    if (!spans.length) return
+    spans.forEach((el) => {
+      el.classList.toggle('is-active', Number(el.getAttribute('data-sent')) === idx)
+    })
+    scrollActiveSentenceIntoView()
   }
 
   function pauseArticle() {
