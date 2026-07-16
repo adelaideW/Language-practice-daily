@@ -94,9 +94,12 @@ export function loadSettings() {
   }
 }
 
-/** @param {Partial<Settings>} patch */
-export function saveSettings(patch) {
-  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+/** @param {Partial<Settings>} patch @param {{ markKeyboardExplicit?: boolean }} [opts] */
+export function saveSettings(patch, opts = {}) {
+  if (
+    Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+    opts.markKeyboardExplicit !== false
+  ) {
     markKeyboardPreferenceExplicit(ZH_KEYBOARD_EXPLICIT_KEY)
   }
   const next = { ...loadSettings(), ...patch }

@@ -6,6 +6,7 @@ import {
   loadEnglishSettings,
   saveEnglishSettings,
   DEFAULT_ENGLISH_SETTINGS,
+  EN_KEYBOARD_EXPLICIT_KEY,
 } from './settings.js'
 import {
   ENGLISH_WORDS,
@@ -33,6 +34,7 @@ import { renderAnsiKeyboardRows, resolveHintKeys } from '../keyboard.js'
 import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
+import { installViewportKeyboardSync } from '../viewport.js'
 
 const STORAGE_MODE = 'english-practice-mode'
 const STORAGE_BEST = 'english-best-combo'
@@ -554,8 +556,8 @@ export function bootEnglish(root) {
     focusApp()
   }
 
-  function applySettingsPatch(patch) {
-    settings = saveEnglishSettings(patch)
+  function applySettingsPatch(patch, opts) {
+    settings = saveEnglishSettings(patch, opts)
     if (patch.durationMinutes != null) {
       state.durationMinutes = settings.durationMinutes
       if (!state.sessionActive) state.remainingMs = state.durationMinutes * 60 * 1000
@@ -583,6 +585,22 @@ export function bootEnglish(root) {
     if (lengthChanged && state.mode === 'article') {
       refitCurrentArticle()
       render()
+      return
+    }
+
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+      Object.keys(patch).every((k) => k === 'keyboardCovered')
+    ) {
+      document.querySelector('.keyboard')?.classList.toggle('covered', settings.keyboardCovered)
+      const kbToggle = document.querySelector('#kb-toggle')
+      if (kbToggle) {
+        kbToggle.textContent = settings.keyboardCovered ? 'Show keyboard' : 'Hide keyboard'
+      }
+      const coverCheckbox = document.querySelector('#set-cover')
+      if (coverCheckbox instanceof HTMLInputElement) {
+        coverCheckbox.checked = settings.keyboardCovered
+      }
       return
     }
 
@@ -1528,4 +1546,10 @@ export function bootEnglish(root) {
   state.remainingMs = state.durationMinutes * 60 * 1000
   startPassage(state.mode)
   render()
+
+  installViewportKeyboardSync(
+    EN_KEYBOARD_EXPLICIT_KEY,
+    () => settings.keyboardCovered,
+    (covered) => applySettingsPatch({ keyboardCovered: covered }, { markKeyboardExplicit: false }),
+  )
 }

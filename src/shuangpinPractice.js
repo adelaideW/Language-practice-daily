@@ -5,6 +5,7 @@ import {
   saveSettings,
   SCHEME_OPTIONS,
   DEFAULT_SETTINGS,
+  ZH_KEYBOARD_EXPLICIT_KEY,
 } from './settings.js'
 import {
   recordMistake,
@@ -28,6 +29,7 @@ import { punctTypingKey, isPracticeTypingKey } from './punct.js'
 import { renderAnsiKeyboardRows, resolveHintKeys } from './keyboard.js'
 import { scrollTypingFocusIntoView } from './scrollTypingFocus.js'
 import { speakBudgetFromMinutes } from './speaking/length.js'
+import { installViewportKeyboardSync } from './viewport.js'
 import { speakText } from './speaking/speech.js'
 
 function escapeHtml(s) {
@@ -602,8 +604,8 @@ function softApplySettingsVisuals(patch) {
   }
 }
 
-function applySettingsPatch(patch) {
-  settings = saveSettings(patch)
+function applySettingsPatch(patch, opts) {
+  settings = saveSettings(patch, opts)
   if (patch.durationMinutes != null) {
     state.durationMinutes = settings.durationMinutes
     if (!state.sessionActive) {
@@ -637,6 +639,14 @@ function applySettingsPatch(patch) {
   if (lengthChanged && state.mode === 'article') {
     refitCurrentArticle()
     render()
+    return
+  }
+
+  if (
+    Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+    Object.keys(patch).every((k) => k === 'keyboardCovered')
+  ) {
+    softApplySettingsVisuals(patch)
     return
   }
 
@@ -1858,4 +1868,10 @@ export function bootShuangpin(root) {
   else startPassage(state.mode)
 
   render()
+
+  installViewportKeyboardSync(
+    ZH_KEYBOARD_EXPLICIT_KEY,
+    () => settings.keyboardCovered,
+    (covered) => applySettingsPatch({ keyboardCovered: covered }, { markKeyboardExplicit: false }),
+  )
 }

@@ -83,9 +83,12 @@ export function loadJapaneseSettings() {
   }
 }
 
-/** @param {Partial<JapaneseSettings>} patch */
-export function saveJapaneseSettings(patch) {
-  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+/** @param {Partial<JapaneseSettings>} patch @param {{ markKeyboardExplicit?: boolean }} [opts] */
+export function saveJapaneseSettings(patch, opts = {}) {
+  if (
+    Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+    opts.markKeyboardExplicit !== false
+  ) {
     markKeyboardPreferenceExplicit(JA_KEYBOARD_EXPLICIT_KEY)
   }
   const next = { ...loadJapaneseSettings(), ...patch }

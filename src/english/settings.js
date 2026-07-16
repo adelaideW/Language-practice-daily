@@ -85,9 +85,12 @@ export function loadEnglishSettings() {
   }
 }
 
-/** @param {Partial<EnglishSettings>} patch */
-export function saveEnglishSettings(patch) {
-  if (Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered')) {
+/** @param {Partial<EnglishSettings>} patch @param {{ markKeyboardExplicit?: boolean }} [opts] */
+export function saveEnglishSettings(patch, opts = {}) {
+  if (
+    Object.prototype.hasOwnProperty.call(patch, 'keyboardCovered') &&
+    opts.markKeyboardExplicit !== false
+  ) {
     markKeyboardPreferenceExplicit(EN_KEYBOARD_EXPLICIT_KEY)
   }
   const next = { ...loadEnglishSettings(), ...patch }

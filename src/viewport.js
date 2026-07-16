@@ -48,3 +48,32 @@ export function markKeyboardPreferenceExplicit(explicitStorageKey) {
     /* ignore */
   }
 }
+
+/**
+ * Keep keyboard covered in sync when crossing tablet/desktop breakpoints,
+ * unless the user has explicitly toggled the keyboard.
+ * @param {string} explicitStorageKey
+ * @param {() => boolean} getCovered
+ * @param {(covered: boolean) => void} setCoveredSilent must not mark preference explicit
+ */
+export function installViewportKeyboardSync(explicitStorageKey, getCovered, setCoveredSilent) {
+  if (typeof window === 'undefined') return () => {}
+  const sync = () => {
+    try {
+      if (localStorage.getItem(explicitStorageKey) === '1') return
+    } catch {
+      /* ignore */
+    }
+    const want = shouldHideKeyboardByDefault()
+    if (want === getCovered()) return
+    setCoveredSilent(want)
+  }
+  const mqW = window.matchMedia('(max-width: 768px)')
+  const mqH = window.matchMedia('(max-height: 720px)')
+  mqW.addEventListener('change', sync)
+  mqH.addEventListener('change', sync)
+  return () => {
+    mqW.removeEventListener('change', sync)
+    mqH.removeEventListener('change', sync)
+  }
+}

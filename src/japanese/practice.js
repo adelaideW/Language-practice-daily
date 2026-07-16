@@ -7,6 +7,7 @@ import {
   loadJapaneseSettings,
   saveJapaneseSettings,
   DEFAULT_JAPANESE_SETTINGS,
+  JA_KEYBOARD_EXPLICIT_KEY,
 } from './settings.js'
 import {
   JP_WORDS,
@@ -34,6 +35,7 @@ import { speakBudgetFromMinutes } from '../speaking/length.js'
 import { enrichPassageWithReadings } from '../speaking/furigana.js'
 import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText } from '../speaking/speech.js'
+import { installViewportKeyboardSync } from '../viewport.js'
 
 const STORAGE_MODE = 'japanese-practice-mode'
 const STORAGE_BEST = 'japanese-best-combo'
@@ -573,8 +575,8 @@ export function bootJapanese(root) {
     focusApp()
   }
 
-  function applySettingsPatch(patch) {
-    settings = saveJapaneseSettings(patch)
+  function applySettingsPatch(patch, opts) {
+    settings = saveJapaneseSettings(patch, opts)
     if (patch.durationMinutes != null) {
       state.durationMinutes = settings.durationMinutes
       if (!state.sessionActive) state.remainingMs = state.durationMinutes * 60 * 1000
@@ -1481,4 +1483,10 @@ export function bootJapanese(root) {
     focusApp()
   })
   render()
+
+  installViewportKeyboardSync(
+    JA_KEYBOARD_EXPLICIT_KEY,
+    () => settings.keyboardCovered,
+    (covered) => applySettingsPatch({ keyboardCovered: covered }, { markKeyboardExplicit: false }),
+  )
 }
