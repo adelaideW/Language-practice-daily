@@ -3,8 +3,8 @@
  *
  * Tiers:
  * - Desktop ≥769px
- * - Tablet 394–768px
- * - Phone ≤393px
+ * - Tablet 574–768px
+ * - Phone / mobile chrome <574px (max-width: 573px)
  */
 
 /**

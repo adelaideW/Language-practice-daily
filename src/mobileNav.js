@@ -1,5 +1,5 @@
 /**
- * Phone-only (≤393px) chrome: language action sheet, bottom tabs, pending drawers.
+ * Phone/mobile chrome (<574px): language action sheet, bottom tabs, pending drawers.
  */
 
 import { TRACKS, switchTrack } from './track.js'
@@ -9,7 +9,7 @@ import { TRACKS, switchTrack } from './track.js'
 /** @typedef {'mistakes' | 'settings'} DrawerName */
 
 const PENDING_DRAWER_KEY = 'pending-drawer'
-const PHONE_MQ = '(max-width: 393px)'
+const PHONE_MQ = '(max-width: 573px)'
 
 /** @type {null | ((name: DrawerName) => void)} */
 let drawerOpener = null

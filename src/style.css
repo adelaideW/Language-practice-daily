@@ -572,10 +572,12 @@ button.scheme-btn:focus-visible {
 }
 
 .char-stage {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.85rem;
+  width: 100%;
 }
 
 .char-stage.passage-stage {
@@ -688,7 +690,7 @@ button.scheme-btn:focus-visible {
   justify-content: center;
   min-height: 11rem;
   width: 100%;
-  padding: 0.5rem 0 0.25rem;
+  padding: 2.75rem 0 0.25rem;
 }
 
 .word-display {
@@ -842,8 +844,24 @@ button.scheme-btn:focus-visible {
   fill: currentColor;
 }
 
-.mobile-practice-action,
-.mobile-stage-actions,
+.mobile-practice-action {
+  display: inline-flex;
+}
+
+.mobile-stage-actions {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.main > .toolbar #btn-skip,
+.main > .toolbar #btn-speak {
+  display: none !important;
+}
+
 .stats-reset-row {
   display: none;
 }
@@ -2686,8 +2704,8 @@ button.scheme-btn:focus-visible {
   }
 }
 
-/* Phone (≤393px): dense mobile typing chrome — after all base rules */
-@media (max-width: 393px) {
+/* Phone / mobile chrome (<574px): dense typing chrome — after all base rules */
+@media (max-width: 573px) {
   /* Hide desktop language rail */
   .lang-panel {
     display: none !important;
@@ -2885,14 +2903,8 @@ button.scheme-btn:focus-visible {
     display: none !important;
   }
 
-  .main > .toolbar #btn-skip,
-  .main > .toolbar #btn-speak,
   .main > .toolbar [data-reset-stats] {
     display: none !important;
-  }
-
-  .mobile-practice-action {
-    display: inline-flex;
   }
 
   .practice-upload-control {
@@ -2914,30 +2926,6 @@ button.scheme-btn:focus-visible {
     width: 1rem;
     height: 1rem;
     fill: currentColor;
-  }
-
-  .mobile-stage-actions {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    z-index: 2;
-    display: flex;
-    gap: 0.35rem;
-  }
-
-  .char-stage {
-    position: relative;
-    width: 100%;
-  }
-
-  .char-stage.word-stage {
-    padding-top: 2.75rem;
-  }
-
-  .practice-icon-btn.is-speaking {
-    background: var(--jade-soft);
-    color: var(--jade-deep);
-    border-color: color-mix(in srgb, var(--jade) 35%, var(--line));
   }
 
   /* Speaking: keep listen/speak controls reachable on a short phone screen */
