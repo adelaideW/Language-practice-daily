@@ -354,9 +354,17 @@ export function bootSpeaking(root, opts) {
       patchListen()
       return
     }
+    const text =
+      state.scope === 'line' ? currentSentence() : state.lesson.article
+    startSpeech(text)
+  }
+
+  function startSpeech(text) {
+    const trimmed = String(text || '').trim()
+    if (!trimmed) return
     state.speaking = true
     state.paused = false
-    speakText(state.lesson.article, language, state.rate, () => {
+    speakText(trimmed, language, state.rate, () => {
       state.speaking = false
       state.paused = false
       patchListen()
@@ -387,8 +395,10 @@ export function bootSpeaking(root, opts) {
     render()
     if (readAloud && settings.speakOnSentenceClick) {
       const line = currentSentence()
-      if (line) speakText(line, language, state.rate)
+      if (line) startSpeech(line)
+      return
     }
+    if (state.speaking || state.paused) stopArticle()
   }
 
   function micIconHtml(listening) {
@@ -459,7 +469,9 @@ export function bootSpeaking(root, opts) {
     const playLabel =
       state.paused
         ? t('Resume', '再開', '继续')
-        : t('Listen', '全文を聴く', '听全文')
+        : state.scope === 'line'
+          ? t('Listen', 'この行を聴く', '听这一句')
+          : t('Listen', '全文を聴く', '听全文')
     const pauseLabel = t('Pause', '一時停止', '暂停')
     const stopLabel = t('Stop', '停止', '停止')
     return `
