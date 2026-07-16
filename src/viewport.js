@@ -79,30 +79,39 @@ export function installViewportKeyboardSync(explicitStorageKey, getCovered, setC
 }
 
 /**
- * Keep mobile typing article layouts inside the visible viewport while the
- * system keyboard is open. This lets the article pane shrink while the typing
- * chrome stays visible above the keyboard.
+ * Immersive mobile typing: when the system keyboard is open, pin the practice
+ * card to the visual viewport and hide timer / stats / skill chrome so the
+ * article and typing controls get the full visible area.
  */
 export function installMobileTypingViewportSync() {
   if (typeof window === 'undefined') return () => {}
   const vv = window.visualViewport
   const root = document.documentElement
   const mobileMq = window.matchMedia('(max-width: 573px)')
+  let wasOpen = false
 
   const sync = () => {
-    const main = document.querySelector('.main')
     const mirror = document.querySelector('#key-mirror')
     const focused = document.activeElement === mirror
     const viewportHeight = vv?.height || window.innerHeight
-    const keyboardInset = Math.max(0, window.innerHeight - viewportHeight - (vv?.offsetTop || 0))
+    const offsetTop = vv?.offsetTop || 0
+    const keyboardInset = Math.max(0, window.innerHeight - viewportHeight - offsetTop)
     const keyboardOpen = mobileMq.matches && focused && keyboardInset > 80
 
     root.style.setProperty('--mobile-vvh', `${Math.round(viewportHeight)}px`)
+    root.style.setProperty('--mobile-vv-top', `${Math.round(offsetTop)}px`)
     root.style.setProperty('--mobile-keyboard-inset', `${Math.round(keyboardInset)}px`)
-    if (main) {
-      root.style.setProperty('--mobile-main-top', `${Math.max(0, Math.round(main.getBoundingClientRect().top))}px`)
-    }
     document.body.classList.toggle('mobile-typing-keyboard-open', keyboardOpen)
+
+    if (keyboardOpen && !wasOpen) {
+      window.scrollTo(0, 0)
+      // Keep the focused mirror from letting iOS scroll chrome back into view.
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0)
+        document.querySelector('.practice-card')?.scrollIntoView({ block: 'start', inline: 'nearest' })
+      })
+    }
+    wasOpen = keyboardOpen
   }
 
   const rafSync = () => requestAnimationFrame(sync)

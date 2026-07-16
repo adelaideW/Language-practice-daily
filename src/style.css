@@ -1504,9 +1504,9 @@ button.scheme-btn:focus-visible {
 
 .english-passage {
   font-size: clamp(1.1rem, 2.35vw, 1.32rem);
-  line-height: 1.9;
-  letter-spacing: 0.01em;
-  word-spacing: normal;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  word-spacing: 0.05em;
   word-break: normal;
   overflow-wrap: break-word;
   white-space: normal;
@@ -3409,11 +3409,37 @@ button.scheme-btn:focus-visible {
     overflow: hidden;
   }
 
+  /* Immersive: hide chrome that isn't useful while typing */
+  body.mobile-typing-keyboard-open .skill-sticky-head,
+  body.mobile-typing-keyboard-open .topbar,
+  body.mobile-typing-keyboard-open .timer-bar,
+  body.mobile-typing-keyboard-open .stats-disclosure,
+  body.mobile-typing-keyboard-open .stats,
+  body.mobile-typing-keyboard-open .main > .toolbar,
+  body.mobile-typing-keyboard-open .keyboard-wrap,
+  body.mobile-typing-keyboard-open .keyboard,
+  body.mobile-typing-keyboard-open .mobile-bottom-nav,
+  body.mobile-typing-keyboard-open .footer-note,
+  body.mobile-typing-keyboard-open .hints-row-bottom {
+    display: none !important;
+  }
+
+  /* Pin practice area to the visual viewport above the keyboard */
   body.mobile-typing-keyboard-open .main {
-    height: calc(var(--mobile-vvh, 100dvh) - var(--mobile-main-top, 0px) - 0.5rem);
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: var(--mobile-vv-top, 0px);
+    height: var(--mobile-vvh, 100dvh);
+    max-width: none;
+    margin: 0;
+    z-index: 30;
     min-height: 0;
     overflow: hidden;
-    padding-bottom: 0.5rem;
+    padding: 0.4rem 0.75rem 0.35rem;
+    gap: 0;
+    box-sizing: border-box;
+    background: var(--paper, var(--bg, #f6f3ee));
   }
 
   body.mobile-typing-keyboard-open .practice-card {
@@ -3421,30 +3447,38 @@ button.scheme-btn:focus-visible {
     min-height: 0;
     max-height: 100%;
     overflow: hidden;
+    padding: 0.55rem 0.65rem 0.45rem;
+    border-radius: 14px;
   }
 
   body.mobile-typing-keyboard-open .char-stage.passage-stage {
     flex: 1 1 auto;
     min-height: 0;
-    gap: 0.45rem;
+    gap: 0.35rem;
   }
 
+  /* Keep a thin title/progress row; drop bulky upload actions while typing */
   body.mobile-typing-keyboard-open .passage-meta {
     flex: 0 0 auto;
   }
 
+  body.mobile-typing-keyboard-open .passage-actions,
+  body.mobile-typing-keyboard-open .page-bar {
+    display: none !important;
+  }
+
   body.mobile-typing-keyboard-open .passage-scroll {
     flex: 1 1 auto;
-    min-height: 5.5rem;
+    min-height: 7rem;
     max-height: none;
   }
 
   body.mobile-typing-keyboard-open .passage-scroll:has(.english-passage) {
-    min-height: 6.25rem;
+    min-height: 7.5rem;
   }
 
   body.mobile-typing-keyboard-open .char-stage.passage-stage:has(.english-passage) {
-    gap: 0.55rem;
+    gap: 0.4rem;
   }
 
   body.mobile-typing-keyboard-open .typing-chrome {
@@ -3452,14 +3486,16 @@ button.scheme-btn:focus-visible {
     position: sticky;
     bottom: 0;
     z-index: 4;
-    margin-top: 0.35rem;
-    padding: 0.55rem 0 0;
+    margin-top: 0.25rem;
+    padding: 0.45rem 0 0;
     background: linear-gradient(180deg, transparent, var(--surface-solid) 24%);
   }
 
-  body.mobile-typing-keyboard-open .mobile-bottom-nav,
-  body.mobile-typing-keyboard-open .footer-note {
-    display: none !important;
+  body.mobile-typing-keyboard-open .char-stage.word-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    justify-content: center;
+    padding-top: 0.5rem;
   }
 
   .hints-row-bottom {
