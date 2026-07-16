@@ -476,9 +476,12 @@ export function bootSpeaking(root, opts) {
 
   function patchLive() {
     const status = root.querySelector('.spk-mic-status')
-    const live = root.querySelector('.spk-live')
+    const float = root.querySelector('.spk-transcribe-float')
+    const floatText = root.querySelector('.spk-transcribe-text')
     const err = root.querySelector('.spk-sr-error')
     const mic = root.querySelector('.spk-mic')
+    const block = root.querySelector('.spk-mic-block')
+    if (block) block.classList.toggle('is-listening', state.listening)
     if (mic) {
       mic.classList.toggle('is-listening', state.listening)
       mic.innerHTML = micIconHtml(state.listening)
@@ -495,13 +498,11 @@ export function bootSpeaking(root, opts) {
         ? t('Listening… tap to stop', '聞き取り中…タップで停止', '正在听写…点按停止')
         : t('Tap to start speaking', 'タップして話す', '点按开始说话')
     }
-    if (live) {
-      if (state.transcript || state.listening) {
-        live.hidden = false
-        live.textContent = state.transcript || '…'
-      } else {
-        live.hidden = true
-      }
+    if (float) {
+      float.hidden = !state.listening
+    }
+    if (floatText && state.listening) {
+      floatText.textContent = state.transcript || '…'
     }
     if (err) {
       if (state.srError) {
@@ -1006,7 +1007,11 @@ export function bootSpeaking(root, opts) {
 
                 ${
                   recognizer.supported
-                    ? `<div class="spk-mic-block">
+                    ? `<div class="spk-mic-block${state.listening ? ' is-listening' : ''}">
+                        <div class="spk-transcribe-float" ${state.listening ? '' : 'hidden'} aria-live="polite">
+                          <span class="spk-transcribe-label">${t('Auto transcribing', '自動文字起こし中', '自动转写中')}</span>
+                          <p class="spk-transcribe-text">${escapeHtml(state.transcript || '…')}</p>
+                        </div>
                         <button type="button" class="spk-mic ${state.listening ? 'is-listening' : ''}" id="spk-mic" aria-pressed="${state.listening}" aria-label="${
                           state.listening
                             ? t('Stop recording', '録音を停止', '停止录音')
@@ -1019,9 +1024,6 @@ export function bootSpeaking(root, opts) {
                             ? t('Listening… tap to stop', '聞き取り中…タップで停止', '正在听写…点按停止')
                             : t('Tap to start speaking', 'タップして話す', '点按开始说话')
                         }</p>
-                        <p class="spk-live" ${state.transcript || state.listening ? '' : 'hidden'}>${escapeHtml(
-                          state.transcript || '…',
-                        )}</p>
                         <p class="spk-sr-error error-text" ${state.srError ? '' : 'hidden'}>${escapeHtml(
                           state.srError,
                         )}</p>
