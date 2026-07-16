@@ -38,6 +38,7 @@ import { installViewportKeyboardSync } from '../viewport.js'
 import {
   bindStatsDisclosure,
   consumePendingDrawer,
+  isPhoneViewport,
   patchStatsSummary,
   registerDrawerHandlers,
   registerModeControl,
@@ -1305,6 +1306,14 @@ export function bootEnglish(root) {
           : ''
 
     const mistakeCount = loadEnglishMistakes().length
+
+    if (state.drawer && isPhoneViewport()) {
+      root.innerHTML = drawer
+      bindEvents()
+      state.drawerJustOpened = false
+      syncBottomTabActive()
+      return
+    }
 
     root.innerHTML = `
       <header class="topbar">

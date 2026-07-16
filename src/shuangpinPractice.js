@@ -34,6 +34,7 @@ import { speakText } from './speaking/speech.js'
 import {
   bindStatsDisclosure,
   consumePendingDrawer,
+  isPhoneViewport,
   patchStatsSummary,
   registerDrawerHandlers,
   registerModeControl,
@@ -1564,6 +1565,15 @@ function render() {
     state.mode === 'character'
       ? '<span><kbd>读音</kbd> 按钮听当前字</span>'
       : '<span><kbd>朗读</kbd> 按钮读当前字</span>'
+
+  // Phone: Mistakes / Settings replace the practice tree — nothing left to scroll behind.
+  if (state.drawer && isPhoneViewport()) {
+    app.innerHTML = drawer
+    bindEvents()
+    state.drawerJustOpened = false
+    syncBottomTabActive()
+    return
+  }
 
   app.innerHTML = `
     <header class="topbar">

@@ -19,7 +19,7 @@ import { loadEnglishSettings, saveEnglishSettings } from '../english/settings.js
 import { loadJapaneseSettings, saveJapaneseSettings } from '../japanese/settings.js'
 import { loadSettings, saveSettings } from '../settings.js'
 import { toFuriganaHtml } from './furigana.js'
-import { registerDrawerHandlers, syncBottomTabActive } from '../mobileNav.js'
+import { registerDrawerHandlers, syncBottomTabActive, isPhoneViewport } from '../mobileNav.js'
 
 const ICON_RECORD = `<svg class="spk-mic-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11.25a6.5 6.5 0 0 0 13 0"/><path d="M12 17.75V21"/><path d="M9.25 21h5.5"/></svg>`
 const ICON_STOP = `<svg class="spk-mic-icon spk-stop-icon" width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="2" width="12" height="12" rx="2" fill="currentColor"/></svg>`
@@ -700,6 +700,102 @@ export function bootSpeaking(root, opts) {
     // so the article never looks empty while Kuroshiro initializes.
     const articleBody = articleHtmlSync()
 
+    const settingsDrawerHtml =
+      state.drawer === 'settings'
+        ? `<aside class="drawer" role="dialog" aria-label="${t('Settings', '設定', '设置')}">
+        <div class="drawer-head">
+          <h2>${t('Speaking settings', 'スピーキング設定', '口语设置')}</h2>
+          <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
+        </div>
+        <div class="drawer-body">
+          <section class="drawer-section">
+            <h3>${t('Playback', '読み上げ', '朗读')}</h3>
+            <label class="opt-row">
+              <input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} />
+              <span>${
+                t(
+                  'Read when clicking on a sentence',
+                  '文をクリックしたとき読み上げ',
+                  '点击句子时朗读',
+                )
+              }</span>
+            </label>
+            ${
+              language === 'ja'
+                ? `<label class="opt-row">
+              <input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} />
+              <span>${
+                t(
+                  'Show hiragana above kanji',
+                  '漢字にひらがな（ふりがな）を表示',
+                  '在汉字上方显示假名',
+                )
+              }</span>
+            </label>`
+                : ''
+            }
+          </section>
+          <section class="drawer-section">
+            <h3>${t('Article length', '文章の長さ', '文章长度')}</h3>
+            <p class="drawer-lead">${
+              t(
+                'Use either time or word/character count — only one applies. Set a min and max.',
+                '時間か文字数のどちらか一方だけ適用されます。最小と最大を設定します。',
+                '时间与字数二选一，同时只生效一种。可设置最少和最多。',
+              )
+            }</p>
+            <label class="opt-row">
+              <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
+              <span>${t('Time limit', '時間', '时间')}</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
+              <input type="number" id="set-speak-min-minutes" min="1" max="${settings.speakMaxMinutes}" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">${t('min', '分', '分钟')}</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
+              <input type="number" id="set-speak-minutes" min="${settings.speakMinMinutes}" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
+              <span class="unit">${t('min', '分', '分钟')}</span>
+            </label>
+            <label class="opt-row">
+              <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
+              <span>${
+                language === 'en'
+                  ? 'Word count'
+                  : t('Character count', '文字数', '字数')
+              }</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
+              <input type="number" id="set-speak-min-count" min="10" max="${settings.speakMaxCount}" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
+            </label>
+            <label class="field-row field-row-unit">
+              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
+              <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
+              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
+            </label>
+            <p class="drawer-lead">${t(
+              'Takes effect when you press Done.',
+              '「完了」を押すと反映されます。',
+              '点「完成」后立即生效。',
+            )}</p>
+          </section>
+        </div>
+        <div class="drawer-foot">
+          <button type="button" class="primary" id="btn-close-drawer">${t('Done', '完了', '完成')}</button>
+        </div>
+      </aside>`
+        : ''
+
+    if (state.drawer === 'settings' && isPhoneViewport()) {
+      root.innerHTML = settingsDrawerHtml
+      bindAll()
+      syncBottomTabActive()
+      return
+    }
+
     root.innerHTML = `
       <div class="speaking-app">
         <header class="spk-top">
@@ -850,92 +946,7 @@ export function bootSpeaking(root, opts) {
       </div>
       ${
         state.drawer === 'settings'
-          ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>
-      <aside class="drawer" role="dialog" aria-label="${t('Settings', '設定', '设置')}">
-        <div class="drawer-head">
-          <h2>${t('Speaking settings', 'スピーキング設定', '口语设置')}</h2>
-          <button type="button" class="drawer-close" id="btn-close-drawer" aria-label="Close">×</button>
-        </div>
-        <div class="drawer-body">
-          <section class="drawer-section">
-            <h3>${t('Playback', '読み上げ', '朗读')}</h3>
-            <label class="opt-row">
-              <input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} />
-              <span>${
-                t(
-                  'Read when clicking on a sentence',
-                  '文をクリックしたとき読み上げ',
-                  '点击句子时朗读',
-                )
-              }</span>
-            </label>
-            ${
-              language === 'ja'
-                ? `<label class="opt-row">
-              <input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} />
-              <span>${
-                t(
-                  'Show hiragana above kanji',
-                  '漢字にひらがな（ふりがな）を表示',
-                  '在汉字上方显示假名',
-                )
-              }</span>
-            </label>`
-                : ''
-            }
-          </section>
-          <section class="drawer-section">
-            <h3>${t('Article length', '文章の長さ', '文章长度')}</h3>
-            <p class="drawer-lead">${
-              t(
-                'Use either time or word/character count — only one applies. Set a min and max.',
-                '時間か文字数のどちらか一方だけ適用されます。最小と最大を設定します。',
-                '时间与字数二选一，同时只生效一种。可设置最少和最多。',
-              )
-            }</p>
-            <label class="opt-row">
-              <input type="radio" name="speak-limit-mode" value="time" ${settings.speakLimitMode !== 'count' ? 'checked' : ''} />
-              <span>${t('Time limit', '時間', '时间')}</span>
-            </label>
-            <label class="field-row field-row-unit">
-              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
-              <input type="number" id="set-speak-min-minutes" min="1" max="${settings.speakMaxMinutes}" value="${settings.speakMinMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
-              <span class="unit">${t('min', '分', '分钟')}</span>
-            </label>
-            <label class="field-row field-row-unit">
-              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
-              <input type="number" id="set-speak-minutes" min="${settings.speakMinMinutes}" max="30" value="${settings.speakMaxMinutes}" ${settings.speakLimitMode === 'count' ? 'disabled' : ''} />
-              <span class="unit">${t('min', '分', '分钟')}</span>
-            </label>
-            <label class="opt-row">
-              <input type="radio" name="speak-limit-mode" value="count" ${settings.speakLimitMode === 'count' ? 'checked' : ''} />
-              <span>${
-                language === 'en'
-                  ? 'Word count'
-                  : t('Character count', '文字数', '字数')
-              }</span>
-            </label>
-            <label class="field-row field-row-unit">
-              <span class="unit-prefix">${t('Min', '最小', '最少')}</span>
-              <input type="number" id="set-speak-min-count" min="10" max="${settings.speakMaxCount}" value="${settings.speakMinCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
-              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
-            </label>
-            <label class="field-row field-row-unit">
-              <span class="unit-prefix">${t('Max', '最大', '最多')}</span>
-              <input type="number" id="set-speak-count" min="${settings.speakMinCount}" max="2000" value="${settings.speakMaxCount}" ${settings.speakLimitMode !== 'count' ? 'disabled' : ''} />
-              <span class="unit">${language === 'en' ? 'words' : t('chars', '文字', '字')}</span>
-            </label>
-            <p class="drawer-lead">${t(
-              'Takes effect when you press Done.',
-              '「完了」を押すと反映されます。',
-              '点「完成」后立即生效。',
-            )}</p>
-          </section>
-        </div>
-        <div class="drawer-foot">
-          <button type="button" class="primary" id="btn-close-drawer">${t('Done', '完了', '完成')}</button>
-        </div>
-      </aside>`
+          ? `<div class="drawer-backdrop" id="drawer-backdrop"></div>${settingsDrawerHtml}`
           : ''
       }
     `

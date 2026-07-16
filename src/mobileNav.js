@@ -437,6 +437,7 @@ export function syncBottomTabActive() {
   const nav = document.querySelector('#mobile-bottom-nav')
   if (!nav) return
   const open = drawerStateGetter?.() || null
+  document.body.classList.toggle('mobile-drawer-page', Boolean(open))
   nav.querySelectorAll('[data-mobile-tab]').forEach((btn) => {
     const tab = btn.getAttribute('data-mobile-tab')
     if (tab === 'typing' || tab === 'speaking') {

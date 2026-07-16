@@ -2728,24 +2728,77 @@ button.scheme-btn:focus-visible {
     display: none !important;
   }
 
-  .drawer {
-    inset: 0 0 calc(4.1rem + env(safe-area-inset-bottom, 0px)) 0;
+  body.mobile-drawer-page {
+    overflow: hidden;
+    height: 100dvh;
+    overscroll-behavior: none;
+    background: var(--surface-solid);
+  }
+
+  body.mobile-drawer-page::before {
+    display: none;
+  }
+
+  html:has(body.mobile-drawer-page) {
+    overflow: hidden;
+  }
+
+  body.mobile-drawer-page .skill-sticky-head {
+    display: none !important;
+  }
+
+  body.mobile-drawer-page #app,
+  body.mobile-drawer-page .app-shell,
+  body.mobile-drawer-page .app-content,
+  body.mobile-drawer-page .skill-shell,
+  body.mobile-drawer-page .skill-host {
+    background: var(--surface-solid);
+    overflow: hidden;
+    height: 100dvh;
+    max-height: 100dvh;
+    min-height: 0;
+  }
+
+  body.mobile-drawer-page .skill-host {
+    padding-bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  body.mobile-drawer-page .skill-host > :not(.drawer):not(.drawer-backdrop) {
+    display: none !important;
+  }
+
+  /* In-flow page (not a fixed overlay with a gap over the bottom nav). */
+  body.mobile-drawer-page .drawer {
+    position: relative;
+    inset: auto;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
     width: 100%;
+    height: 100%;
     max-width: none;
     box-shadow: none;
     border: 0;
     animation: none !important;
-    z-index: 55;
+    z-index: 1;
+    background: var(--surface-solid);
+  }
+
+  body.mobile-drawer-page .drawer-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2rem;
   }
 
   .drawer-head,
   .drawer-body,
   .drawer-foot {
     width: 100%;
-  }
-
-  .drawer-body {
-    padding-bottom: 2rem;
   }
 
   .drawer-close,
