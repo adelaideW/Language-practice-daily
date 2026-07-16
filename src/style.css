@@ -1154,7 +1154,8 @@ button.scheme-btn:focus-visible {
   padding-bottom: 1.5rem;
 }
 
-@media (max-width: 720px) {
+/* Phone (≤393px): dense mobile typing chrome */
+@media (max-width: 393px) {
   .topbar {
     flex-direction: column;
     align-items: stretch;
@@ -1170,6 +1171,7 @@ button.scheme-btn:focus-visible {
   .brand.brand-modes {
     justify-content: flex-start;
     width: 100%;
+    order: 1;
   }
 
   .mode-tabs {
@@ -1181,10 +1183,6 @@ button.scheme-btn:focus-visible {
     width: 100%;
     justify-content: flex-start;
     order: 2;
-  }
-
-  .brand.brand-modes {
-    order: 1;
   }
 
   .stats {
@@ -1215,7 +1213,7 @@ button.scheme-btn:focus-visible {
     display: none;
   }
 
-  /* Req 2: no duration suggestion chips — number input only */
+  /* No duration suggestion chips — number input only */
   .dur-group .dur-btn {
     display: none;
   }
@@ -1243,15 +1241,6 @@ button.scheme-btn:focus-visible {
     font-size: 0.7rem;
   }
 
-  /* Req 1: covered keyboard takes no vertical space */
-  .keyboard-wrap:has(.keyboard.covered) {
-    display: none;
-  }
-
-  .keyboard.covered {
-    display: none;
-  }
-
   .kb-row:nth-child(2),
   .kb-row:nth-child(3) {
     padding-left: 0;
@@ -1262,7 +1251,6 @@ button.scheme-btn:focus-visible {
     display: none;
   }
 
-  /* Req 4 base: keep toolbar actions visible; wrap on very small phones */
   .toolbar {
     flex-wrap: wrap;
     justify-content: center;
@@ -1286,23 +1274,31 @@ button.scheme-btn:focus-visible {
   }
 }
 
-/* iPhone-14-class phones: one-row toolbar without horizontal scroll */
-@media (min-width: 393px) and (min-height: 852px) and (max-width: 720px) {
-  .toolbar {
-    flex-wrap: nowrap;
-    overflow-x: visible;
+/* Tablet + phone (≤768px): collapsed language rail + covered keyboard takes no space */
+@media (max-width: 768px) {
+  .lang-panel {
+    width: 72px;
+    padding-left: 0.45rem;
+    padding-right: 0.45rem;
   }
 
-  .toolbar > button {
-    font-size: 0.76rem;
-    padding: 0 0.5rem;
-    height: 1.8rem;
+  .lang-panel-titles,
+  .lang-copy,
+  .lang-panel-note {
+    display: none;
   }
 
-  /* Chinese has an extra hints button — keep core four compact; allow slight shrink */
-  .toolbar > button#btn-hints {
-    font-size: 0.72rem;
-    padding: 0 0.4rem;
+  .lang-item {
+    justify-content: center;
+    padding: 0.55rem 0.25rem;
+  }
+
+  .keyboard-wrap:has(.keyboard.covered) {
+    display: none;
+  }
+
+  .keyboard.covered {
+    display: none;
   }
 }
 
@@ -1927,24 +1923,7 @@ button.scheme-btn:focus-visible {
   min-height: clamp(3.2rem, 8.2vw, 4.1rem);
 }
 
-@media (max-width: 720px) {
-  .lang-panel {
-    width: 72px;
-    padding-left: 0.45rem;
-    padding-right: 0.45rem;
-  }
-
-  .lang-panel-titles,
-  .lang-copy,
-  .lang-panel-note {
-    display: none;
-  }
-
-  .lang-item {
-    justify-content: center;
-    padding: 0.55rem 0.25rem;
-  }
-}
+/* Lang rail for ≤768 is defined with tablet+phone block above */
 
 .complete-banner .btn-kbd {
   display: inline-block;
@@ -2056,7 +2035,7 @@ button.scheme-btn:focus-visible {
   min-width: 0;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 393px) {
   .skill-lang-head,
   .skill-tabs {
     margin-left: 0.85rem;
@@ -2621,7 +2600,7 @@ button.scheme-btn:focus-visible {
   opacity: 0.9;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 768px) {
   .spk-layout {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -2656,7 +2635,7 @@ button.scheme-btn:focus-visible {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 393px) {
   .speaking-app {
     padding: 0.75rem 0.85rem 2rem;
   }

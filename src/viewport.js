@@ -1,31 +1,26 @@
 /**
  * Viewport helpers for responsive practice defaults.
+ *
+ * Tiers:
+ * - Desktop ≥769px
+ * - Tablet 394–768px
+ * - Phone ≤393px
  */
 
 /**
- * Small screens / short windows / low display resolution — hide the on-screen keyboard by default.
- * Users can still show it; that choice is stored as an explicit preference.
+ * Hide the on-screen keyboard by default on tablet + phone (≤768px),
+ * or when the window is very short. Users can still show it; that choice
+ * is stored as an explicit preference.
  */
 export function shouldHideKeyboardByDefault() {
   if (typeof window === 'undefined') return false
   try {
-    // Phone-first: narrow viewports always start with keyboard hidden.
-    if (window.matchMedia('(max-width: 720px)').matches) return true
-    const compact = window.matchMedia(
-      [
-        '(max-width: 900px)',
-        '(max-height: 720px)',
-        '(max-width: 1366px) and (max-height: 800px)',
-      ].join(', '),
-    )
-    if (compact.matches) return true
+    if (window.matchMedia('(max-width: 768px)').matches) return true
+    // Short laptop / browser chrome windows still benefit from a hidden keyboard.
+    if (window.matchMedia('(max-height: 720px)').matches) return true
   } catch {
     /* ignore */
   }
-  const sw = Number(window.screen?.width) || 0
-  const sh = Number(window.screen?.height) || 0
-  // Common low-resolution laptop / tablet native resolutions
-  if (sw > 0 && sh > 0 && (sw <= 1366 || sh <= 768)) return true
   return false
 }
 

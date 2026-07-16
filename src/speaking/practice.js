@@ -940,7 +940,7 @@ export function bootSpeaking(root, opts) {
     const side = root.querySelector('.spk-side')
     const pane = root.querySelector('.spk-article-pane')
     if (!side || !pane) return
-    if (window.matchMedia('(max-width: 900px)').matches) {
+    if (window.matchMedia('(max-width: 768px)').matches) {
       pane.style.height = ''
       pane.style.maxHeight = ''
       side.style.height = ''
