@@ -211,6 +211,9 @@ export function bootSpeaking(root, opts) {
     listening: false,
     srError: '',
     drawer: /** @type {null | 'settings'} */ (null),
+    /** Phone: slide-up feedback sheet after grading */
+    feedbackSheetOpen: false,
+    feedbackSheetExpanded: false,
   }
 
   const paragraphs = () =>
@@ -263,6 +266,8 @@ export function bootSpeaking(root, opts) {
   function clearActiveFeedback() {
     if (state.scope === 'article') state.fullResult = null
     else state.results[state.index] = undefined
+    state.feedbackSheetOpen = false
+    state.feedbackSheetExpanded = false
     persistResults()
   }
 
@@ -285,6 +290,10 @@ export function bootSpeaking(root, opts) {
     }
     state.grading = true
     state.gradeError = ''
+    if (isPhoneViewport()) {
+      state.feedbackSheetOpen = true
+      state.feedbackSheetExpanded = false
+    }
     render()
     try {
       const result = await gradeRepeat(language, original, transcript)
@@ -299,6 +308,10 @@ export function bootSpeaking(root, opts) {
       if (state.scope === 'article') state.fullResult = packed
       else state.results[state.index] = packed
       persistResults()
+      if (isPhoneViewport()) {
+        state.feedbackSheetOpen = true
+        state.feedbackSheetExpanded = false
+      }
     } catch {
       state.gradeError =
         t(
@@ -306,6 +319,7 @@ export function bootSpeaking(root, opts) {
           '採点中に問題が発生しました。もう一度お試しください。',
           '评分出错了，请再试一次。',
         )
+      if (isPhoneViewport() && !activeFeedback()) state.feedbackSheetOpen = false
     } finally {
       state.grading = false
       render()
@@ -328,6 +342,8 @@ export function bootSpeaking(root, opts) {
     state.manualText = ''
     state.gradeError = ''
     state.transcript = ''
+    state.feedbackSheetOpen = false
+    state.feedbackSheetExpanded = false
     furiganaCache.clear()
     recognizer.reset()
     render()
@@ -428,6 +444,8 @@ export function bootSpeaking(root, opts) {
     state.manualText = ''
     state.gradeError = ''
     state.transcript = ''
+    state.feedbackSheetOpen = false
+    state.feedbackSheetExpanded = false
     recognizer.reset()
     render()
     if (readAloud) {
@@ -664,11 +682,7 @@ export function bootSpeaking(root, opts) {
     return html || `<span class="spk-mark muted">—</span>`
   }
 
-  function feedbackHtml() {
-    const fb = activeFeedback()
-    if (!fb) {
-      return `<div class="spk-feedback-slot" aria-hidden="true"></div>`
-    }
+  function feedbackDetailsHtml(fb) {
     const original = fb.original || fb.sentence || gradeTarget()
     const heard = fb.transcript || ''
     const diff =
@@ -677,41 +691,105 @@ export function bootSpeaking(root, opts) {
     const hasMistakes = diff.some((op) => op.type !== 'match')
 
     return `
+      <p class="spk-section-label">${t(
+        'Compare original & heard',
+        '原文と認識結果の比較',
+        '原文与识别对比',
+      )}</p>
+      <div class="spk-diff" lang="${language}">
+        <div class="spk-diff-row">
+          <span class="spk-diff-label">${t('Original', '原文', '原文')}</span>
+          <p class="spk-diff-line">${renderDiffLine(diff, 'original')}</p>
+        </div>
+        <div class="spk-diff-row">
+          <span class="spk-diff-label">${t('Heard', '認識', '识别')}</span>
+          <p class="spk-diff-line">${renderDiffLine(diff, 'heard')}</p>
+        </div>
+        <p class="spk-diff-legend">
+          <span><mark class="spk-mark miss"> </mark> ${t('Missing', '抜け', '遗漏')}</span>
+          <span><mark class="spk-mark change"> </mark> ${t('Changed', '違い', '不同')}</span>
+          <span><mark class="spk-mark extra"> </mark> ${t('Extra', '余分', '多说')}</span>
+        </p>
+        ${
+          !hasMistakes
+            ? `<p class="spk-diff-ok">${t(
+                'No mismatches spotted in the transcript.',
+                '認識上の食い違いは見つかりませんでした。',
+                '识别结果与原文基本一致。',
+              )}</p>`
+            : ''
+        }
+      </div>
+      <p class="spk-section-label">${t('What to improve', '改善ポイント', '改进建议')}</p>
+      <ul class="spk-improve">${(fb.improvements || []).map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+    `
+  }
+
+  function feedbackHtml() {
+    const fb = activeFeedback()
+    if (!fb) {
+      return `<div class="spk-feedback-slot" aria-hidden="true"></div>`
+    }
+
+    return `
       <div class="spk-feedback-slot">
         <div class="spk-feedback">
           <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
           <p class="spk-summary">${escapeHtml(fb.summary)}</p>
-          <p class="spk-section-label">${t(
-            'Compare original & heard',
-            '原文と認識結果の比較',
-            '原文与识别对比',
-          )}</p>
-          <div class="spk-diff" lang="${language}">
-            <div class="spk-diff-row">
-              <span class="spk-diff-label">${t('Original', '原文', '原文')}</span>
-              <p class="spk-diff-line">${renderDiffLine(diff, 'original')}</p>
-            </div>
-            <div class="spk-diff-row">
-              <span class="spk-diff-label">${t('Heard', '認識', '识别')}</span>
-              <p class="spk-diff-line">${renderDiffLine(diff, 'heard')}</p>
-            </div>
-            <p class="spk-diff-legend">
-              <span><mark class="spk-mark miss"> </mark> ${t('Missing', '抜け', '遗漏')}</span>
-              <span><mark class="spk-mark change"> </mark> ${t('Changed', '違い', '不同')}</span>
-              <span><mark class="spk-mark extra"> </mark> ${t('Extra', '余分', '多说')}</span>
-            </p>
-            ${
-              !hasMistakes
-                ? `<p class="spk-diff-ok">${t(
-                    'No mismatches spotted in the transcript.',
-                    '認識上の食い違いは見つかりませんでした。',
-                    '识别结果与原文基本一致。',
-                  )}</p>`
-                : ''
-            }
+          ${feedbackDetailsHtml(fb)}
+        </div>
+      </div>
+    `
+  }
+
+  function feedbackSheetHtml() {
+    if (!isPhoneViewport()) return ''
+    const open = state.feedbackSheetOpen
+    const fb = activeFeedback()
+    const sents = sentences()
+    const canNext = state.index < sents.length - 1
+    const expandLabel = state.feedbackSheetExpanded
+      ? t('Hide details', '詳細を隠す', '收起详情')
+      : t('See full feedback', '詳細を見る', '查看完整反馈')
+
+    let body = ''
+    if (state.grading) {
+      body = `<p class="spk-hint spk-feedback-sheet-status">${t('Grading…', '採点中…', '评分中…')}</p>`
+    } else if (fb) {
+      body = `
+        <div class="spk-rating" aria-label="${fb.rating}/5">${ratingDots(fb.rating)} <span>${fb.rating}/5</span></div>
+        <p class="spk-summary">${escapeHtml(fb.summary)}</p>
+        <button type="button" class="ghost-chip spk-feedback-expand" id="spk-feedback-expand" aria-expanded="${state.feedbackSheetExpanded}">
+          ${expandLabel}
+        </button>
+        <div class="spk-feedback-details" ${state.feedbackSheetExpanded ? '' : 'hidden'}>
+          ${feedbackDetailsHtml(fb)}
+        </div>
+        <div class="spk-feedback-actions">
+          <button type="button" class="ghost-chip" id="spk-feedback-retry">${t('Try again', 'もう一度', '再试一次')}</button>
+          <button type="button" class="primary" id="spk-feedback-next" ${canNext ? '' : 'disabled'}>
+            ${t('Next line', '次の行', '下一句')}
+          </button>
+        </div>
+      `
+    } else if (state.gradeError) {
+      body = `<p class="error-text">${escapeHtml(state.gradeError)}</p>`
+    } else {
+      return ''
+    }
+
+    return `
+      <div class="spk-feedback-sheet ${open ? 'is-open' : ''}" id="spk-feedback-sheet" ${open ? '' : 'hidden'}>
+        <div class="spk-feedback-sheet-backdrop" data-close-feedback-sheet></div>
+        <div class="spk-feedback-sheet-panel" role="dialog" aria-label="${t('Feedback', 'フィードバック', '反馈')}">
+          <div class="spk-feedback-sheet-handle" aria-hidden="true"></div>
+          <div class="spk-feedback-sheet-head">
+            <h2 class="spk-feedback-sheet-title">${t('Feedback', 'フィードバック', '反馈')}</h2>
+            <button type="button" class="practice-icon-btn" id="spk-feedback-close" aria-label="${t('Close', '閉じる', '关闭')}">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12 19 6.4 17.6 5 12 10.6 6.4 5Z"/></svg>
+            </button>
           </div>
-          <p class="spk-section-label">${t('What to improve', '改善ポイント', '改进建议')}</p>
-          <ul class="spk-improve">${(fb.improvements || []).map((x) => `<li>${escapeHtml(x)}</li>`).join('')}</ul>
+          ${body}
         </div>
       </div>
     `
@@ -848,6 +926,7 @@ export function bootSpeaking(root, opts) {
         : ''
 
     if (state.drawer === 'settings' && isPhoneViewport()) {
+      document.body.classList.remove('spk-feedback-sheet-open')
       root.innerHTML = settingsDrawerHtml
       bindAll()
       syncBottomTabActive()
@@ -960,9 +1039,9 @@ export function bootSpeaking(root, opts) {
                       </div>`
                 }
 
-                ${state.grading ? `<p class="spk-hint">${t('Grading…', '採点中…', '评分中…')}</p>` : ''}
-                ${state.gradeError ? `<p class="error-text">${escapeHtml(state.gradeError)}</p>` : ''}
-                ${feedbackHtml()}
+                ${state.grading && !phone ? `<p class="spk-hint">${t('Grading…', '採点中…', '评分中…')}</p>` : ''}
+                ${state.gradeError && !phone ? `<p class="error-text">${escapeHtml(state.gradeError)}</p>` : ''}
+                ${phone ? '' : feedbackHtml()}
 
                 ${
                   gradedCount
@@ -999,6 +1078,7 @@ export function bootSpeaking(root, opts) {
             '口语 · 浏览器语音识别',
           )
         }</p>
+        ${feedbackSheetHtml()}
       </div>
       ${
         state.drawer === 'settings'
@@ -1010,6 +1090,7 @@ export function bootSpeaking(root, opts) {
     bindAll()
     syncArticlePaneHeight()
     scrollActiveSentenceIntoView()
+    document.body.classList.toggle('spk-feedback-sheet-open', Boolean(state.feedbackSheetOpen && isPhoneViewport()))
     void enhanceArticleFurigana(gen)
     const side = root.querySelector('.spk-side')
     if (sideResizeObserver) {
@@ -1113,6 +1194,39 @@ export function bootSpeaking(root, opts) {
       syncArticlePaneHeight()
       recognizer.start()
       patchLive()
+    })
+    root.querySelector('[data-close-feedback-sheet]')?.addEventListener('click', () => {
+      state.feedbackSheetOpen = false
+      state.feedbackSheetExpanded = false
+      render()
+    })
+    root.querySelector('#spk-feedback-close')?.addEventListener('click', () => {
+      state.feedbackSheetOpen = false
+      state.feedbackSheetExpanded = false
+      render()
+    })
+    root.querySelector('#spk-feedback-expand')?.addEventListener('click', () => {
+      state.feedbackSheetExpanded = !state.feedbackSheetExpanded
+      render()
+    })
+    root.querySelector('#spk-feedback-retry')?.addEventListener('click', () => {
+      clearActiveFeedback()
+      stopArticle()
+      state.gradeError = ''
+      state.transcript = ''
+      recognizer.reset()
+      render()
+      if (recognizer.supported) {
+        requestAnimationFrame(() => {
+          recognizer.start()
+          patchLive()
+        })
+      }
+    })
+    root.querySelector('#spk-feedback-next')?.addEventListener('click', () => {
+      state.feedbackSheetOpen = false
+      state.feedbackSheetExpanded = false
+      setIndex(state.index + 1)
     })
     root.querySelector('#spk-manual')?.addEventListener('input', (e) => {
       state.manualText = e.target.value

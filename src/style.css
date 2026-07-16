@@ -2569,6 +2569,10 @@ button.scheme-btn:focus-visible {
   line-height: 1.4;
 }
 
+.spk-feedback-sheet {
+  display: none;
+}
+
 .spk-heard {
   margin-top: 0.65rem;
   font-size: 0.88rem;
@@ -2990,6 +2994,111 @@ button.scheme-btn:focus-visible {
 
   .spk-mic-status {
     display: none;
+  }
+
+  /* Feedback slides up above the floating mic + bottom tabs */
+  .spk-feedback-sheet {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .spk-feedback-sheet.is-open {
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .spk-feedback-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 28, 36, 0.4);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+
+  .spk-feedback-sheet.is-open .spk-feedback-sheet-backdrop {
+    opacity: 1;
+  }
+
+  .spk-feedback-sheet-panel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: calc(5.6rem + env(safe-area-inset-bottom, 0px));
+    max-height: min(58vh, 28rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0.55rem 0.95rem 1rem;
+    background: #fbfcfb;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -12px 40px rgba(20, 28, 36, 0.18);
+    transform: translateY(110%);
+    transition: transform 0.22s ease;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .spk-feedback-sheet.is-open .spk-feedback-sheet-panel {
+    transform: translateY(0);
+  }
+
+  .spk-feedback-sheet-handle {
+    width: 2.4rem;
+    height: 0.28rem;
+    margin: 0.1rem auto 0.55rem;
+    border-radius: 999px;
+    background: rgba(26, 35, 50, 0.18);
+  }
+
+  .spk-feedback-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .spk-feedback-sheet-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .spk-feedback-sheet .spk-summary {
+    margin: 0.35rem 0 0.65rem;
+  }
+
+  .spk-feedback-sheet-status {
+    margin: 0.35rem 0 0.5rem;
+  }
+
+  .spk-feedback-expand {
+    margin-bottom: 0.65rem;
+  }
+
+  .spk-feedback-details {
+    margin-bottom: 0.75rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .spk-feedback-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .spk-feedback-actions .primary,
+  .spk-feedback-actions .ghost-chip {
+    flex: 1;
+    justify-content: center;
+  }
+
+  body.spk-feedback-sheet-open .spk-mic {
+    z-index: 75;
   }
 
   .spk-icon-nav:disabled {
