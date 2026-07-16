@@ -33,7 +33,7 @@ export const ZH_KEYBOARD_EXPLICIT_KEY = 'xiaohe-kb-explicit'
 
 /** @type {Settings} */
 export const DEFAULT_SETTINGS = {
-  scheme: 'xiaohe',
+  scheme: 'quanpin',
   smartPractice: false,
   timerMode: 'auto',
   showHints: true,
@@ -72,7 +72,7 @@ export function loadSettings() {
     base.minArticleChars = Math.max(1, Math.min(500, Number(base.minArticleChars) || 20))
     base.charsPerPage = Math.max(20, Math.min(300, Number(base.charsPerPage) || 80))
     if (!['auto', 'manual', 'off'].includes(base.timerMode)) base.timerMode = 'auto'
-    if (!['xiaohe', 'ziranma', 'sogou', 'quanpin'].includes(base.scheme)) base.scheme = 'xiaohe'
+    if (!['xiaohe', 'ziranma', 'sogou', 'quanpin'].includes(base.scheme)) base.scheme = 'quanpin'
     base.keyboardCovered = resolveKeyboardCovered(base.keyboardCovered, ZH_KEYBOARD_EXPLICIT_KEY)
     Object.assign(base, normalizeSpeakLimitSettings(base, 'zh'))
     // One-time: product default for “有错字时也自动下一篇” flipped on
@@ -106,8 +106,8 @@ export function saveSettings(patch) {
 }
 
 export const SCHEME_OPTIONS = [
+  { id: 'quanpin', label: '全拼' },
   { id: 'xiaohe', label: '小鹤双拼' },
   { id: 'ziranma', label: '自然码' },
   { id: 'sogou', label: '搜狗双拼' },
-  { id: 'quanpin', label: '全拼' },
 ]

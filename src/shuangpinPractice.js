@@ -1816,7 +1816,7 @@ function bindEvents() {
  */
 export function bootShuangpin(root) {
   if (root) app = root
-  document.title = '双拼练习'
+  document.title = '拼写练习'
   document.documentElement.lang = 'zh-CN'
 
   window.addEventListener('keydown', (e) => {
