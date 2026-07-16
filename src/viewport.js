@@ -79,16 +79,15 @@ export function installViewportKeyboardSync(explicitStorageKey, getCovered, setC
 }
 
 /**
- * Immersive mobile typing: when the system keyboard is open, pin the practice
- * card to the visual viewport and hide timer / stats / skill chrome so the
- * article and typing controls get the full visible area.
+ * Track visual viewport while typing on phone. Focus-window rendering owns the
+ * article slice; this only tucks the bottom nav when the system keyboard opens
+ * so chrome doesn’t jump dramatically.
  */
 export function installMobileTypingViewportSync() {
   if (typeof window === 'undefined') return () => {}
   const vv = window.visualViewport
   const root = document.documentElement
   const mobileMq = window.matchMedia('(max-width: 573px)')
-  let wasOpen = false
 
   const sync = () => {
     const mirror = document.querySelector('#key-mirror')
@@ -102,16 +101,6 @@ export function installMobileTypingViewportSync() {
     root.style.setProperty('--mobile-vv-top', `${Math.round(offsetTop)}px`)
     root.style.setProperty('--mobile-keyboard-inset', `${Math.round(keyboardInset)}px`)
     document.body.classList.toggle('mobile-typing-keyboard-open', keyboardOpen)
-
-    if (keyboardOpen && !wasOpen) {
-      window.scrollTo(0, 0)
-      // Keep the focused mirror from letting iOS scroll chrome back into view.
-      requestAnimationFrame(() => {
-        window.scrollTo(0, 0)
-        document.querySelector('.practice-card')?.scrollIntoView({ block: 'start', inline: 'nearest' })
-      })
-    }
-    wasOpen = keyboardOpen
   }
 
   const rafSync = () => requestAnimationFrame(sync)
