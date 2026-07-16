@@ -848,6 +848,8 @@ export function bootEnglish(root) {
         hint.innerHTML = suggestionHintHtml()
       }
     }
+    const slots = document.querySelector('.code-progress')
+    if (slots) slots.outerHTML = typingSlotsHtml()
     patchKeyboardHints()
     patchStats()
     scrollCurrentIntoView()
@@ -884,6 +886,44 @@ export function bootEnglish(root) {
         return i === offset ? `<span class="hint-current-letter">${safe}</span>` : safe
       })
       .join('')
+  }
+
+  /** Slot boxes under the suggestion — same pattern as Chinese/Japanese code-progress. */
+  function typingSlotsHtml() {
+    const t = currentTarget()
+    if (!t || !state.passage) return '<div class="code-progress" aria-hidden="true"></div>'
+
+    const ch = t.char
+    let slotChars
+    let start
+
+    if (isTypableSpace(ch) || ch === ' ' || isTypablePunct(ch) || ch === '\n' || !/[A-Za-z0-9']/.test(ch)) {
+      slotChars = [displayChar(ch)]
+      start = t.index
+    } else {
+      const span = wordSpanAroundIndex(state.passage.text, t.index)
+      slotChars = [...span.word]
+      start = span.start
+    }
+
+    const slots = slotChars
+      .map((c, i) => {
+        const abs = start + i
+        const filled = abs < t.index
+        const isCurrent = abs === t.index
+        const cls = [
+          'code-slot',
+          filled ? 'filled' : '',
+          isCurrent && state.lastWrong ? 'error' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')
+        const shown = filled ? escapeHtml(c) : ''
+        return `<div class="${cls}">${shown}</div>`
+      })
+      .join('')
+
+    return `<div class="code-progress" aria-hidden="true">${slots}</div>`
   }
 
   function patchStats() {
@@ -1067,6 +1107,7 @@ export function bootEnglish(root) {
         <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: 'Skip', speak: 'Read aloud' })}</div>
         <div class="hanzi word-display english-word">${escapeHtml(word)}</div>
         <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
+        ${typingSlotsHtml()}
       </div>
     `
   }
@@ -1149,6 +1190,7 @@ export function bootEnglish(root) {
         </div>
         <div class="typing-chrome">
           <div class="pinyin-line">${suggestionHintHtml()}</div>
+          ${typingSlotsHtml()}
         </div>
         ${state.uploadMessage ? `<p class="upload-msg">${escapeHtml(state.uploadMessage)}</p>` : ''}
       </div>

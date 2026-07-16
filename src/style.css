@@ -141,7 +141,8 @@ button.scheme-btn:focus-visible {
 .timer-actions > button,
 .drawer-foot button,
 .nav-icon,
-.ghost-chip {
+.ghost-chip,
+.spk-feedback-actions button {
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
@@ -197,6 +198,7 @@ button.scheme-btn:focus-visible {
 .toolbar button.primary,
 .timer-right .primary,
 .drawer-foot .primary,
+.spk-feedback-actions .primary,
 .dur-btn.active {
   height: var(--btn-height);
   padding: 0 var(--btn-pad-x);
@@ -211,6 +213,7 @@ button.scheme-btn:focus-visible {
 .toolbar button.primary:hover,
 .timer-right .primary:hover,
 .drawer-foot .primary:hover,
+.spk-feedback-actions .primary:hover,
 .dur-btn.active:hover:not(:disabled) {
   background: var(--jade-deep);
   border-color: var(--jade-deep);
