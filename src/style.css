@@ -1360,6 +1360,11 @@ button.scheme-btn:focus-visible {
   border-top: 1px solid var(--line);
 }
 
+.drawer-foot .practice-all-mistakes {
+  min-width: 10rem;
+  justify-content: center;
+}
+
 .opt-row {
   display: flex;
   align-items: flex-start;
@@ -2140,10 +2145,6 @@ button.scheme-btn:focus-visible {
   border-right: 1px solid var(--line);
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
-}
-
-.spk-article-speak {
-  display: none;
 }
 
 .spk-article {
@@ -2942,45 +2943,34 @@ button.scheme-btn:focus-visible {
     display: none !important;
   }
 
-  .spk-article-pane {
-    position: relative;
-    padding-top: 0.35rem;
-  }
-
-  .spk-article-speak {
-    position: sticky;
-    top: 0.35rem;
-    float: right;
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.35rem;
-    height: 2.35rem;
-    margin: 0 0 0.35rem 0.45rem;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: color-mix(in srgb, #ffffff 92%, transparent);
-    color: var(--ink-soft);
-    box-shadow: 0 6px 18px rgba(26, 35, 50, 0.12);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    cursor: pointer;
-  }
-
-  .spk-article-speak svg {
-    width: 1.05rem;
-    height: 1.05rem;
-    fill: currentColor;
-  }
-
-  .spk-article-speak.is-speaking {
-    background: var(--jade-soft);
-    color: var(--jade-deep);
-  }
-
   .spk-nav {
     display: none !important;
+  }
+
+  .speaking-app {
+    padding-bottom: calc(8.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .spk-mic {
+    position: fixed;
+    left: 50%;
+    bottom: calc(4.35rem + env(safe-area-inset-bottom, 0px));
+    z-index: 65;
+    transform: translateX(-50%);
+    width: 4.5rem;
+    height: 4.5rem;
+    background: color-mix(in srgb, #ffffff 94%, transparent);
+    box-shadow: 0 10px 28px rgba(26, 35, 50, 0.2);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .spk-mic.is-listening {
+    transform: translateX(-50%);
+  }
+
+  .spk-mic-status {
+    display: none;
   }
 
   .spk-icon-nav:disabled {

@@ -184,6 +184,8 @@ export function bootJapanese(root) {
     drawer: null,
     drawerJustOpened: false,
     readingsBusy: false,
+    mistakesOnly: false,
+    mistakeIndex: -1,
   }
 
   let tickHandle = null
@@ -447,7 +449,27 @@ export function bootJapanese(root) {
   }
 
   function pickPassage(mode) {
-    if (mode === 'word') return shufflePick(JP_WORDS, state.passage)
+    if (mode === 'word') {
+      if (state.mistakesOnly) {
+        const items = [...new Map(
+          loadJapaneseMistakes()
+            .filter((m) => m.kana || m.surface)
+            .map((m) => [
+              `${m.surface || m.kana}|${m.kana || m.surface}`,
+              {
+                title: 'ミス練習',
+                segments: [{ surface: m.surface || m.kana, kana: m.kana || m.surface }],
+              },
+            ]),
+        ).values()]
+        if (items.length) {
+          state.mistakeIndex = (state.mistakeIndex + 1) % items.length
+          return items[state.mistakeIndex]
+        }
+        state.mistakesOnly = false
+      }
+      return shufflePick(JP_WORDS, state.passage)
+    }
     if (mode === 'article') return pickFittedArticle(state.passage)
     return shufflePick(JP_SENTENCES, state.passage)
   }
@@ -569,6 +591,8 @@ export function bootJapanese(root) {
   }
 
   async function setMode(mode) {
+    state.mistakesOnly = false
+    state.mistakeIndex = -1
     state.mode = mode
     saveMode(mode)
     clearAdvanceTimer()
@@ -1124,8 +1148,8 @@ export function bootJapanese(root) {
           <section class="drawer-section"><h3>最近</h3><ul class="mistake-list">${recent}</ul></section>
         </div>
         <div class="drawer-foot">
+          <button type="button" class="primary practice-all-mistakes" id="btn-practice-mistakes" ${summary.total ? '' : 'disabled'}>すべてのミスを練習</button>
           <button type="button" class="btn-warning" id="btn-clear-mistakes">クリア</button>
-          <button type="button" class="primary" id="btn-close-drawer">完了</button>
         </div>
       </aside>`
   }
@@ -1204,7 +1228,6 @@ export function bootJapanese(root) {
             <label class="opt-row"><input type="checkbox" id="set-auto-advance-mistakes" ${settings.autoAdvanceWithMistakes ? 'checked' : ''} /><span>ミスありでも次へ</span></label>
           </section>
         </div>
-        <div class="drawer-foot"><button type="button" class="primary" id="btn-close-drawer">完了</button></div>
       </aside>`
   }
 
@@ -1430,6 +1453,21 @@ export function bootJapanese(root) {
     document.querySelector('#btn-clear-mistakes')?.addEventListener('click', () => {
       clearJapaneseMistakes()
       render()
+    })
+    document.querySelector('#btn-practice-mistakes')?.addEventListener('click', () => {
+      state.drawer = null
+      state.mode = 'word'
+      saveMode('word')
+      state.mistakesOnly = true
+      state.mistakeIndex = -1
+      state.passageHistory = []
+      state.historyIndex = -1
+      resetSessionStats()
+      void startPassage('word').then(() => {
+        render()
+        syncBottomTabActive()
+        focusApp()
+      })
     })
     document.querySelectorAll('input[name="timerMode"]').forEach((el) =>
       el.addEventListener('change', (e) => {

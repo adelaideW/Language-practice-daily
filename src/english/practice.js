@@ -185,6 +185,8 @@ export function bootEnglish(root) {
     drawer: null,
     drawerJustOpened: false,
     lastWrong: false,
+    mistakesOnly: false,
+    mistakeIndex: -1,
   }
 
   let tickHandle = null
@@ -453,6 +455,14 @@ export function bootEnglish(root) {
 
   function pickPassage(mode) {
     if (mode === 'word') {
+      if (state.mistakesOnly) {
+        const words = [...new Set(loadEnglishMistakes().map((m) => String(m.word || m.expected || '').trim()).filter(Boolean))]
+        if (words.length) {
+          state.mistakeIndex = (state.mistakeIndex + 1) % words.length
+          return { title: 'Mistakes', text: words[state.mistakeIndex] }
+        }
+        state.mistakesOnly = false
+      }
       const pool = settings.smartPractice
         ? smartEnglishWordPool(ENGLISH_WORDS)
         : ENGLISH_WORDS
@@ -550,6 +560,8 @@ export function bootEnglish(root) {
   }
 
   function setMode(mode) {
+    state.mistakesOnly = false
+    state.mistakeIndex = -1
     state.mode = mode
     saveMode(mode)
     clearAdvanceTimer()
@@ -1177,9 +1189,8 @@ export function bootEnglish(root) {
           </section>
         </div>
         <div class="drawer-foot">
-          <button type="button" id="btn-practice-mistakes">Smart practice</button>
+          <button type="button" class="primary practice-all-mistakes" id="btn-practice-mistakes" ${summary.total ? '' : 'disabled'}>Practice all mistakes</button>
           <button type="button" class="btn-warning" id="btn-clear-mistakes">Clear</button>
-          <button type="button" class="primary" id="btn-close-drawer">Done</button>
         </div>
       </aside>
     `
@@ -1303,9 +1314,6 @@ export function bootEnglish(root) {
               <span>Also auto-next with mistakes</span>
             </label>
           </section>
-        </div>
-        <div class="drawer-foot">
-          <button type="button" class="primary" id="btn-close-drawer">Done</button>
         </div>
       </aside>
     `
@@ -1467,11 +1475,15 @@ export function bootEnglish(root) {
       render()
     })
     document.querySelector('#btn-practice-mistakes')?.addEventListener('click', () => {
-      settings = saveEnglishSettings({ smartPractice: true })
       state.drawer = null
+      state.mode = 'word'
+      saveMode('word')
+      state.mistakesOnly = true
+      state.mistakeIndex = -1
       state.passageHistory = []
       state.historyIndex = -1
-      startPassage(state.mode)
+      resetSessionStats()
+      startPassage('word')
       render()
       syncBottomTabActive()
       focusApp()

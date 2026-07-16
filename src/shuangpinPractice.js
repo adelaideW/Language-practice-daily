@@ -114,6 +114,8 @@ const state = {
   // drawers
   drawer: null, // 'mistakes' | 'settings' | null
   drawerJustOpened: false,
+  mistakesOnly: false,
+  mistakeIndex: -1,
 }
 
 let app = document.querySelector('#practice-root') || document.querySelector('#app')
@@ -388,6 +390,18 @@ function bindTimerButtons() {
 }
 
 function nextCharacter() {
+  if (state.mistakesOnly) {
+    const unique = [...new Map(loadMistakes().map((m) => [`${m.char}|${m.pinyin}`, { char: m.char, pinyin: m.pinyin }])).values()]
+    if (unique.length) {
+      state.mistakeIndex = (state.mistakeIndex + 1) % unique.length
+      state.currentChar = unique[state.mistakeIndex]
+      state.buffer = ''
+      state.completed = false
+      state.autoAdvanceNote = ''
+      return
+    }
+    state.mistakesOnly = false
+  }
   const pool = settings.smartPractice ? smartCharacterPool() : CHARACTERS
   state.currentChar = shufflePick(pool, state.currentChar)
   state.buffer = ''
@@ -550,6 +564,8 @@ function resetSessionStats() {
 }
 
 function setMode(mode) {
+  state.mistakesOnly = false
+  state.mistakeIndex = -1
   state.mode = mode
   saveMode(mode)
   resetSessionStats()
@@ -1150,7 +1166,7 @@ function renderMistakesDrawer() {
         </section>
       </div>
       <div class="drawer-foot">
-        <button type="button" class="primary" id="btn-practice-mistakes">练习这些</button>
+        <button type="button" class="primary practice-all-mistakes" id="btn-practice-mistakes" ${summary.total ? '' : 'disabled'}>练习所有错字</button>
         <button type="button" id="btn-clear-mistakes">清空记录</button>
       </div>
     </aside>
@@ -1285,9 +1301,6 @@ function renderSettingsDrawer() {
             <span>有错字时也自动下一篇</span>
           </label>
         </section>
-      </div>
-      <div class="drawer-foot">
-        <button type="button" class="primary" id="btn-close-drawer">完成</button>
       </div>
     </aside>
   `
@@ -1796,12 +1809,15 @@ function bindEvents() {
   })
 
   document.querySelector('#btn-practice-mistakes')?.addEventListener('click', () => {
-    settings = saveSettings({ smartPractice: true })
     state.drawer = null
+    state.mode = 'character'
+    saveMode('character')
+    state.mistakesOnly = true
+    state.mistakeIndex = -1
     state.passageHistory = []
     state.historyIndex = -1
-    if (state.mode === 'character') nextCharacter()
-    else startPassage(state.mode)
+    resetSessionStats()
+    nextCharacter()
     render()
     syncBottomTabActive()
     focusApp()
