@@ -37,6 +37,7 @@ import {
   patchStatsSummary,
   registerDrawerHandlers,
   registerModeControl,
+  renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
   wrapCollapsibleStats,
@@ -1189,11 +1190,11 @@ function renderSettingsDrawer() {
         </section>
         <section class="drawer-section">
           <h3>练习体验</h3>
-          <label class="opt-row">
+          <label class="opt-row setting-keyboard-option">
             <input type="checkbox" id="set-hints" ${settings.showHints ? 'checked' : ''} />
             <span>显示键位提示</span>
           </label>
-          <label class="opt-row">
+          <label class="opt-row setting-keyboard-option">
             <input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} />
             <span>默认遮盖键盘</span>
           </label>
@@ -1317,6 +1318,7 @@ function renderStats() {
     summaryLabels: { streak: '连击', accuracy: '准确率' },
     streakValue: state.combo,
     accuracyValue: `${accuracy()}%`,
+    resetLabel: '重置统计',
   })
 }
 
@@ -1423,6 +1425,7 @@ function renderCharacterStage() {
   const codes = encodeOptions(settings.scheme, t.pinyin)
   return `
     <div class="char-stage">
+      <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: '跳过', speak: '读音' })}</div>
       <div class="hanzi">${t.char}</div>
       <div class="pinyin-line">${t.pinyin} · ${codes.join(' / ')}</div>
       ${renderCodeSlots()}
@@ -1510,10 +1513,12 @@ function renderPassageStage() {
           <span class="passage-progress">${progress}</span>
         </div>
         <div class="passage-actions">
-          <label class="ghost-chip upload-chip" title="上传文本 / PDF / EPUB / 图片">
-            ${state.uploadBusy ? '解析中…' : '上传文章'}
+          <label class="ghost-chip upload-chip practice-upload-control" title="上传文章" aria-label="上传文章">
+            <svg class="upload-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 16.5h2V8.33l3.59 3.58L18 10.5l-6-6-6 6 1.41 1.41L11 8.33v8.17ZM5 19.5h14v-2H5v2Z"/></svg>
+            <span class="upload-label">${state.uploadBusy ? '解析中…' : '上传文章'}</span>
             <input type="file" id="file-upload" accept=".txt,.md,.pdf,.epub,.png,.jpg,.jpeg,.webp,.gif,text/plain,application/pdf,application/epub+zip,image/*" hidden ${state.uploadBusy ? 'disabled' : ''} />
           </label>
+          ${renderMobilePracticeActions({ skip: '跳过', speak: '朗读' })}
         </div>
       </div>
       ${
@@ -1586,9 +1591,9 @@ function render() {
       <div class="toolbar">
         <button type="button" id="btn-skip">跳过</button>
         <button type="button" id="btn-speak">${speakLabel}</button>
-        <button type="button" id="btn-reset">重置统计</button>
-        <button type="button" id="btn-hints">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
-        <button type="button" id="kb-toggle">${settings.keyboardCovered ? '显示键盘' : '遮盖键盘'}</button>
+        <button type="button" id="btn-reset" data-reset-stats>重置统计</button>
+        <button type="button" id="btn-hints" class="keyboard-option-control">${settings.showHints ? '隐藏键位提示' : '显示键位提示'}</button>
+        <button type="button" id="kb-toggle" class="keyboard-option-control">${settings.keyboardCovered ? '显示键盘' : '遮盖键盘'}</button>
       </div>
       ${renderKeyboard()}
     </main>
@@ -1663,30 +1668,36 @@ function bindEvents() {
     applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })
   })
 
-  document.querySelector('#btn-skip')?.addEventListener('click', () => {
-    if (state.sessionFinished) return
-    clearAdvanceTimer()
-    if (state.mode === 'character') {
-      nextCharacter()
-      render()
-    } else {
-      goNextPassage()
-    }
-    focusApp()
+  document.querySelectorAll('#btn-skip, [data-practice-skip]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (state.sessionFinished) return
+      clearAdvanceTimer()
+      if (state.mode === 'character') {
+        nextCharacter()
+        render()
+      } else {
+        goNextPassage()
+      }
+      focusApp()
+    })
   })
 
-  document.querySelector('#btn-speak')?.addEventListener('click', speakCurrent)
+  document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
+    btn.addEventListener('click', speakCurrent)
+  })
 
-  document.querySelector('#btn-reset')?.addEventListener('click', () => {
-    resetSessionStats()
-    if (state.mode === 'character') nextCharacter()
-    else {
-      state.passageHistory = []
-      state.historyIndex = -1
-      startPassage(state.mode)
-    }
-    render()
-    focusApp()
+  document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      resetSessionStats()
+      if (state.mode === 'character') nextCharacter()
+      else {
+        state.passageHistory = []
+        state.historyIndex = -1
+        startPassage(state.mode)
+      }
+      render()
+      focusApp()
+    })
   })
 
   document.querySelector('#btn-hints')?.addEventListener('click', () => {

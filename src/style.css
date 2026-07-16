@@ -789,12 +789,56 @@ button.scheme-btn:focus-visible {
 }
 
 .passage-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   flex-shrink: 0;
 }
 
 .upload-chip {
   cursor: pointer;
   position: relative;
+}
+
+.upload-icon {
+  display: none;
+}
+
+.practice-icon-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-solid);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.practice-icon-btn:hover {
+  background: var(--jade-soft);
+  color: var(--jade-deep);
+}
+
+.practice-icon-btn:active {
+  transform: scale(0.94);
+}
+
+.practice-icon-btn svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
+}
+
+.mobile-practice-action,
+.mobile-stage-actions,
+.stats-reset-row {
+  display: none;
 }
 
 .upload-msg {
@@ -2670,13 +2714,47 @@ button.scheme-btn:focus-visible {
     display: none !important;
   }
 
+  /* Typing schemes are changed from Settings, not from the practice header. */
+  .brand .scheme {
+    display: none !important;
+  }
+
   #spk-open-settings {
     display: none !important;
   }
 
-  /* Drawers are tabs now — hide the in-drawer close icon */
-  .drawer-close {
+  /* Mistakes and Settings are full mobile pages, not side drawers. */
+  .drawer-backdrop {
     display: none !important;
+  }
+
+  .drawer {
+    inset: 0 0 calc(4.1rem + env(safe-area-inset-bottom, 0px)) 0;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+    border: 0;
+    animation: none !important;
+    z-index: 55;
+  }
+
+  .drawer-head,
+  .drawer-body,
+  .drawer-foot {
+    width: 100%;
+  }
+
+  .drawer-body {
+    padding-bottom: 2rem;
+  }
+
+  .drawer-close,
+  .drawer-foot #btn-close-drawer {
+    display: none !important;
+  }
+
+  .drawer-foot:has(> #btn-close-drawer:only-child) {
+    display: none;
   }
 
   .skill-lang-head {
@@ -2707,6 +2785,73 @@ button.scheme-btn:focus-visible {
 
   .stats-disclosure:not(.is-collapsed) .stats {
     margin-top: 0.35rem;
+  }
+
+  .stats-disclosure:not(.is-collapsed) .stats-reset-row {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.35rem 0.2rem 0;
+  }
+
+  .stats-reset-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 0.4rem 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 650;
+    cursor: pointer;
+  }
+
+  /* The native system keyboard replaces the instructional keyboard on phone. */
+  .keyboard-wrap,
+  .keyboard-option-control,
+  .setting-keyboard-option {
+    display: none !important;
+  }
+
+  .main > .toolbar #btn-skip,
+  .main > .toolbar #btn-speak,
+  .main > .toolbar [data-reset-stats] {
+    display: none !important;
+  }
+
+  .mobile-practice-action {
+    display: inline-flex;
+  }
+
+  .practice-upload-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 999px;
+  }
+
+  .practice-upload-control .upload-label {
+    display: none;
+  }
+
+  .practice-upload-control .upload-icon {
+    display: block;
+    width: 1rem;
+    height: 1rem;
+    fill: currentColor;
+  }
+
+  .mobile-stage-actions {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .char-stage {
+    position: relative;
   }
 
   /* Bottom tab bar */

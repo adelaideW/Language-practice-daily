@@ -41,6 +41,7 @@ import {
   patchStatsSummary,
   registerDrawerHandlers,
   registerModeControl,
+  renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
   wrapCollapsibleStats,
@@ -987,6 +988,7 @@ export function bootEnglish(root) {
       summaryLabels: { streak: 'Streak', accuracy: 'Accuracy' },
       streakValue: state.combo,
       accuracyValue: `${accuracy()}%`,
+      resetLabel: 'Reset stats',
     })
   }
 
@@ -1023,6 +1025,7 @@ export function bootEnglish(root) {
 
     return `
       <div class="char-stage word-stage">
+        <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: 'Skip', speak: 'Read aloud' })}</div>
         <div class="hanzi word-display english-word">${escapeHtml(word)}</div>
         <div class="pinyin-line">${t ? displayChar(t.char) : ''}</div>
       </div>
@@ -1085,10 +1088,12 @@ export function bootEnglish(root) {
             <span class="passage-progress">${progress}</span>
           </div>
           <div class="passage-actions">
-            <label class="ghost-chip upload-chip" title="Upload text / PDF / EPUB / image">
-              ${state.uploadBusy ? 'Parsing…' : 'Upload'}
+            <label class="ghost-chip upload-chip practice-upload-control" title="Upload" aria-label="Upload">
+              <svg class="upload-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 16.5h2V8.33l3.59 3.58L18 10.5l-6-6-6 6 1.41 1.41L11 8.33v8.17ZM5 19.5h14v-2H5v2Z"/></svg>
+              <span class="upload-label">${state.uploadBusy ? 'Parsing…' : 'Upload'}</span>
               <input type="file" id="file-upload" accept=".txt,.md,.pdf,.epub,.png,.jpg,.jpeg,.webp,.gif,text/plain,application/pdf,application/epub+zip,image/*" hidden ${state.uploadBusy ? 'disabled' : ''} />
             </label>
+            ${renderMobilePracticeActions({ skip: 'Skip', speak: 'Read aloud' })}
           </div>
         </div>
         ${
@@ -1221,7 +1226,7 @@ export function bootEnglish(root) {
           </section>
           <section class="drawer-section">
             <h3>Experience</h3>
-            <label class="opt-row">
+            <label class="opt-row setting-keyboard-option">
               <input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} />
               <span>Hide keyboard by default</span>
             </label>
@@ -1327,8 +1332,8 @@ export function bootEnglish(root) {
         <div class="toolbar">
           <button type="button" id="btn-skip">Skip</button>
           <button type="button" id="btn-speak">Read aloud</button>
-          <button type="button" id="btn-reset">Reset stats</button>
-          <button type="button" id="kb-toggle">${settings.keyboardCovered ? 'Show keyboard' : 'Hide keyboard'}</button>
+          <button type="button" id="btn-reset" data-reset-stats>Reset stats</button>
+          <button type="button" id="kb-toggle" class="keyboard-option-control">${settings.keyboardCovered ? 'Show keyboard' : 'Hide keyboard'}</button>
         </div>
         ${renderKeyboard()}
       </main>
@@ -1371,19 +1376,25 @@ export function bootEnglish(root) {
       applySettingsPatch({ keyboardCovered: !settings.keyboardCovered })
     })
 
-    document.querySelector('#btn-skip')?.addEventListener('click', () => {
-      if (state.sessionFinished) return
-      clearAdvanceTimer()
-      goNextPassage()
+    document.querySelectorAll('#btn-skip, [data-practice-skip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (state.sessionFinished) return
+        clearAdvanceTimer()
+        goNextPassage()
+      })
     })
-    document.querySelector('#btn-speak')?.addEventListener('click', speakPassage)
-    document.querySelector('#btn-reset')?.addEventListener('click', () => {
-      resetSessionStats()
-      state.passageHistory = []
-      state.historyIndex = -1
-      startPassage(state.mode)
-      render()
-      focusApp()
+    document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
+      btn.addEventListener('click', speakPassage)
+    })
+    document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        resetSessionStats()
+        state.passageHistory = []
+        state.historyIndex = -1
+        startPassage(state.mode)
+        render()
+        focusApp()
+      })
     })
 
     document.querySelector('#btn-next-passage')?.addEventListener('click', () => {

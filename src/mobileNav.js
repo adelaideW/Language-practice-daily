@@ -106,6 +106,7 @@ export function saveStatsCollapsed(storageKey, collapsed) {
  *   summaryLabels: { streak: string, accuracy: string },
  *   streakValue: string | number,
  *   accuracyValue: string | number,
+ *   resetLabel?: string,
  * }} opts
  */
 export function wrapCollapsibleStats(statsInnerHtml, opts) {
@@ -118,6 +119,11 @@ export function wrapCollapsibleStats(statsInnerHtml, opts) {
         <span class="stats-summary-chevron" aria-hidden="true">${collapsed ? '▾' : '▴'}</span>
       </button>
       ${statsInnerHtml}
+      ${
+        opts.resetLabel
+          ? `<div class="stats-reset-row"><button type="button" class="stats-reset-btn" data-reset-stats>${opts.resetLabel}</button></div>`
+          : ''
+      }
     </div>
   `
 }
@@ -362,6 +368,21 @@ export function syncModeControl() {
   }
 }
 
+/**
+ * Phone action icons shown beside the upload control.
+ * @param {{ skip: string, speak: string }} labels
+ */
+export function renderMobilePracticeActions(labels) {
+  return `
+    <button type="button" class="practice-icon-btn mobile-practice-action" data-practice-skip aria-label="${labels.skip}" title="${labels.skip}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5.5v13l9-6.5-9-6.5Zm10 0v13h2v-13h-2Z"/></svg>
+    </button>
+    <button type="button" class="practice-icon-btn mobile-practice-action" data-practice-speak aria-label="${labels.speak}" title="${labels.speak}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm11.5-.9v2.05a2.5 2.5 0 0 1 0 3.7v2.05a4.5 4.5 0 0 0 0-7.8Zm2.5-2.6v2.12a6.5 6.5 0 0 1 0 8.76v2.12a8.5 8.5 0 0 0 0-13Z"/></svg>
+    </button>
+  `
+}
+
 /** @param {boolean} open */
 function openModeSheet(open) {
   const sheet = document.querySelector('#mode-action-sheet')
@@ -392,8 +413,7 @@ function handleTab(lang, tab, onSkillChange) {
 
   if (tab === 'mistakes') {
     if (currentSkill === 'typing' && drawerOpener) {
-      if (drawerStateGetter?.() === 'mistakes' && drawerCloser) drawerCloser()
-      else drawerOpener('mistakes')
+      if (drawerStateGetter?.() !== 'mistakes') drawerOpener('mistakes')
       syncBottomTabActive()
       return
     }
@@ -404,8 +424,7 @@ function handleTab(lang, tab, onSkillChange) {
 
   if (tab === 'settings') {
     if (drawerOpener) {
-      if (drawerStateGetter?.() === 'settings' && drawerCloser) drawerCloser()
-      else drawerOpener('settings')
+      if (drawerStateGetter?.() !== 'settings') drawerOpener('settings')
       syncBottomTabActive()
       return
     }

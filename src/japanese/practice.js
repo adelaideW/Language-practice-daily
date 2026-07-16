@@ -42,6 +42,7 @@ import {
   patchStatsSummary,
   registerDrawerHandlers,
   registerModeControl,
+  renderMobilePracticeActions,
   syncBottomTabActive,
   syncModeControl,
   wrapCollapsibleStats,
@@ -927,6 +928,7 @@ export function bootJapanese(root) {
       summaryLabels: { streak: '連打', accuracy: '正確率' },
       streakValue: state.combo,
       accuracyValue: `${accuracy()}%`,
+      resetLabel: '統計リセット',
     })
   }
 
@@ -970,6 +972,7 @@ export function bootJapanese(root) {
 
     return `
       <div class="char-stage word-stage">
+        <div class="mobile-stage-actions">${renderMobilePracticeActions({ skip: 'スキップ', speak: '読み上げ' })}</div>
         <div class="hanzi word-display jp-word${showFuri ? ' has-furigana' : ''}">${wordHtml}</div>
         <div class="pinyin-line">${hintText}</div>
         <div class="code-progress">${slots}</div>
@@ -1046,9 +1049,12 @@ export function bootJapanese(root) {
             <span class="passage-progress">${progress}</span>
           </div>
           <div class="passage-actions">
-            <label class="ghost-chip upload-chip">${state.uploadBusy ? '…' : 'アップロード'}
+            <label class="ghost-chip upload-chip practice-upload-control" title="アップロード" aria-label="アップロード">
+              <svg class="upload-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 16.5h2V8.33l3.59 3.58L18 10.5l-6-6-6 6 1.41 1.41L11 8.33v8.17ZM5 19.5h14v-2H5v2Z"/></svg>
+              <span class="upload-label">${state.uploadBusy ? '…' : 'アップロード'}</span>
               <input type="file" id="file-upload" accept=".txt,.md,.pdf,.epub,.png,.jpg,.jpeg,.webp,text/plain,application/pdf,image/*" hidden ${state.uploadBusy ? 'disabled' : ''} />
             </label>
+            ${renderMobilePracticeActions({ skip: 'スキップ', speak: '読み上げ' })}
           </div>
         </div>
         ${
@@ -1132,7 +1138,7 @@ export function bootJapanese(root) {
           </section>
           <section class="drawer-section">
             <h3>体験</h3>
-            <label class="opt-row"><input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} /><span>キーボードを隠す</span></label>
+            <label class="opt-row setting-keyboard-option"><input type="checkbox" id="set-cover" ${settings.keyboardCovered ? 'checked' : ''} /><span>キーボードを隠す</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak" ${settings.speakOnCorrect ? 'checked' : ''} /><span>正解で読み上げ</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak-sentence" ${settings.speakOnSentenceClick ? 'checked' : ''} /><span>文をクリックしたとき読み上げ（スピーキング）</span></label>
             <label class="opt-row"><input type="checkbox" id="set-speak-hiragana" ${settings.speakShowHiragana ? 'checked' : ''} /><span>漢字にひらがな（ふりがな）を表示</span></label>
@@ -1282,8 +1288,8 @@ export function bootJapanese(root) {
         <div class="toolbar">
           <button type="button" id="btn-skip">スキップ</button>
           <button type="button" id="btn-speak">読み上げ</button>
-          <button type="button" id="btn-reset">統計リセット</button>
-          <button type="button" id="kb-toggle">${settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'}</button>
+          <button type="button" id="btn-reset" data-reset-stats>統計リセット</button>
+          <button type="button" id="kb-toggle" class="keyboard-option-control">${settings.keyboardCovered ? 'キーボード表示' : 'キーボード非表示'}</button>
         </div>
         ${renderKeyboard()}
       </main>
@@ -1342,20 +1348,26 @@ export function bootJapanese(root) {
     document.querySelector('#kb-toggle')?.addEventListener('click', () =>
       applySettingsPatch({ keyboardCovered: !settings.keyboardCovered }),
     )
-    document.querySelector('#btn-skip')?.addEventListener('click', () => {
-      if (!state.sessionFinished) {
-        clearAdvanceTimer()
-        goNextPassage()
-      }
+    document.querySelectorAll('#btn-skip, [data-practice-skip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (!state.sessionFinished) {
+          clearAdvanceTimer()
+          goNextPassage()
+        }
+      })
     })
-    document.querySelector('#btn-speak')?.addEventListener('click', speakPassage)
-    document.querySelector('#btn-reset')?.addEventListener('click', () => {
-      resetSessionStats()
-      state.passageHistory = []
-      state.historyIndex = -1
-      void startPassage(state.mode).then(() => {
-        render()
-        focusApp()
+    document.querySelectorAll('#btn-speak, [data-practice-speak]').forEach((btn) => {
+      btn.addEventListener('click', speakPassage)
+    })
+    document.querySelectorAll('[data-reset-stats]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        resetSessionStats()
+        state.passageHistory = []
+        state.historyIndex = -1
+        void startPassage(state.mode).then(() => {
+          render()
+          focusApp()
+        })
       })
     })
     document.querySelector('#btn-next-passage')?.addEventListener('click', () => void goNextPassage())
