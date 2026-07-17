@@ -37,11 +37,6 @@ import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText, cancelSpeech, isSpeechPlaying } from '../speaking/speech.js'
 import { installMobileTypingViewportSync, installViewportKeyboardSync } from '../viewport.js'
 import {
-  focusFadeAfterHtml,
-  focusFadeBeforeHtml,
-  focusWindowSegBounds,
-} from '../focusWindow.js'
-import {
   bindStatsDisclosure,
   consumePendingDrawer,
   isPhoneViewport,
@@ -861,20 +856,12 @@ export function bootJapanese(root) {
   function patchLive() {
     if (!state.passage || state.completed || state.sessionFinished) return
     const cur = currentTarget()
-    const useFocus = isPhoneViewport() && state.mode !== 'word'
-    const passageEl = document.querySelector('.jp-passage')
-
-    if (useFocus && passageEl) {
-      passageEl.innerHTML = japanesePassageHtml()
-      passageEl.closest('.passage-scroll')?.classList.add('focus-window')
-    } else {
-      const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-      document.querySelectorAll('.jp-seg').forEach((el) => {
-        const i = Number(el.dataset.seg)
-        el.classList.toggle('done', doneSeg.has(i))
-        el.classList.toggle('current', cur && i === cur.index)
-      })
-    }
+    const doneSeg = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
+    document.querySelectorAll('.jp-seg').forEach((el) => {
+      const i = Number(el.dataset.seg)
+      el.classList.toggle('done', doneSeg.has(i))
+      el.classList.toggle('current', cur && i === cur.index)
+    })
     const metaProg = document.querySelector('.passage-progress')
     if (metaProg) {
       metaProg.textContent = passageProgressLabel()
@@ -913,26 +900,10 @@ export function bootJapanese(root) {
     const pageSegEnd = state.units[page.end - 1]?.index ?? pageSegStart
     const segs = state.passage.segments || []
     const showFuri = settings.speakShowHiragana
-    const curSeg = cur?.index ?? pageSegStart
 
-    let start = pageSegStart
-    let end = pageSegEnd
-    let clippedBefore = false
-    let clippedAfter = false
-    if (isPhoneViewport()) {
-      const win = focusWindowSegBounds(curSeg, { start: pageSegStart, end: pageSegEnd }, {
-        before: 4,
-        after: 5,
-      })
-      start = win.start
-      end = win.end
-      clippedBefore = win.clippedBefore
-      clippedAfter = win.clippedAfter
-    }
-
-    const chars = segs
+    return segs
       .map((seg, i) => {
-        if (i < start || i > end) return ''
+        if (i < pageSegStart || i > pageSegEnd) return ''
         const classes = ['jp-seg']
         if (!seg.kana) classes.push('jp-punct')
         if (seg.surface === ' ' || seg.surface === '\u3000') classes.push('jp-space')
@@ -941,8 +912,6 @@ export function bootJapanese(root) {
         return `<span class="${classes.join(' ')}" data-seg="${i}">${segmentSurfaceHtml(seg, showFuri)}</span>`
       })
       .join('')
-
-    return `${clippedBefore ? focusFadeBeforeHtml() : ''}${chars}${clippedAfter ? focusFadeAfterHtml() : ''}`
   }
 
   function scrollCurrentIntoView() {
@@ -1114,7 +1083,6 @@ export function bootJapanese(root) {
     const canPrev = state.historyIndex > 0
     const hira = cur ? hintHiragana(cur.kana) : ''
     const showFuri = settings.speakShowHiragana
-    const focusOn = isPhoneViewport()
 
     return `
       <div class="char-stage passage-stage">
@@ -1145,7 +1113,7 @@ export function bootJapanese(root) {
               </div>`
             : ''
         }
-        <div class="passage-scroll${focusOn ? ' focus-window' : ''}">
+        <div class="passage-scroll">
           <div class="passage poem jp-passage${showFuri ? ' has-furigana' : ''}">${japanesePassageHtml()}</div>
         </div>
         <div class="typing-chrome">

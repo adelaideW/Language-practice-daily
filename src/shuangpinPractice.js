@@ -32,11 +32,6 @@ import { speakBudgetFromMinutes } from './speaking/length.js'
 import { installMobileTypingViewportSync, installViewportKeyboardSync } from './viewport.js'
 import { speakText, cancelSpeech, isSpeechPlaying } from './speaking/speech.js'
 import {
-  focusFadeAfterHtml,
-  focusFadeBeforeHtml,
-  focusWindowCharBounds,
-} from './focusWindow.js'
-import {
   bindStatsDisclosure,
   consumePendingDrawer,
   isPhoneViewport,
@@ -903,18 +898,12 @@ function patchPassageCursor() {
   const doneIndexes = new Set(
     state.units.slice(0, state.unitIndex).map((u) => u.index),
   )
-  const useFocus = isPhoneViewport()
 
-  if (useFocus) {
-    passage.innerHTML = passageCharsHtml()
-    passage.closest('.passage-scroll')?.classList.add('focus-window')
-  } else {
-    passage.querySelectorAll('.ch').forEach((el) => {
-      const i = Number(el.dataset.i)
-      el.classList.toggle('done', doneIndexes.has(i))
-      el.classList.toggle('current', i === currentIndex)
-    })
-  }
+  passage.querySelectorAll('.ch').forEach((el) => {
+    const i = Number(el.dataset.i)
+    el.classList.toggle('done', doneIndexes.has(i))
+    el.classList.toggle('current', i === currentIndex)
+  })
 
   const metaProg = document.querySelector('.passage-progress')
   if (metaProg) {
@@ -931,32 +920,16 @@ function patchPassageCursor() {
   scrollCurrentIntoView()
 }
 
-function passageVisibleBounds() {
-  const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
-  const pageUnits = state.units.slice(page.start, page.end)
-  const pageStart = pageUnits[0]?.index ?? 0
-  const pageEnd = pageUnits[pageUnits.length - 1]?.index ?? 0
-  const currentIndex = state.units[state.unitIndex]?.index ?? pageStart
-  const text = state.passage?.text || ''
-
-  if (!isPhoneViewport()) {
-    return { start: pageStart, end: pageEnd, clippedBefore: false, clippedAfter: false }
-  }
-
-  return focusWindowCharBounds(text, currentIndex, { start: pageStart, end: pageEnd }, {
-    linesBefore: 1,
-    linesAfter: 1,
-    charsPerLine: 16,
-  })
-}
-
 function passageCharsHtml() {
   if (!state.passage) return ''
   const currentIndex = state.units[state.unitIndex]?.index ?? -1
   const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-  const { start, end, clippedBefore, clippedAfter } = passageVisibleBounds()
+  const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
+  const pageUnits = state.units.slice(page.start, page.end)
+  const start = pageUnits[0]?.index ?? 0
+  const end = pageUnits[pageUnits.length - 1]?.index ?? 0
 
-  const chars = [...state.passage.text]
+  return [...state.passage.text]
     .map((ch, i) => {
       if (i < start || i > end) return ''
       const classes = ['ch']
@@ -967,8 +940,6 @@ function passageCharsHtml() {
       return `<span class="${classes.join(' ')}" data-i="${i}">${show}</span>`
     })
     .join('')
-
-  return `${clippedBefore ? focusFadeBeforeHtml() : ''}${chars}${clippedAfter ? focusFadeAfterHtml() : ''}`
 }
 
 function patchCharacterView() {
@@ -1580,7 +1551,6 @@ function renderPassageStage() {
   const codes = currentCodes()
   const multiPage = state.pages.length > 1
   const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · 错 ${state.passageWrong}` : ''}`
-  const focusOn = isPhoneViewport()
 
   return `
     <div class="char-stage passage-stage">
@@ -1608,7 +1578,7 @@ function renderPassageStage() {
             </div>`
           : ''
       }
-      <div class="passage-scroll${focusOn ? ' focus-window' : ''}">
+      <div class="passage-scroll">
         <div class="passage poem">${passageCharsHtml()}</div>
       </div>
       <div class="typing-chrome">

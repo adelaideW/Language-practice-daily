@@ -37,11 +37,6 @@ import { scrollTypingFocusIntoView } from '../scrollTypingFocus.js'
 import { speakText, cancelSpeech, isSpeechPlaying } from '../speaking/speech.js'
 import { installMobileTypingViewportSync, installViewportKeyboardSync } from '../viewport.js'
 import {
-  focusFadeAfterHtml,
-  focusFadeBeforeHtml,
-  focusWindowCharBounds,
-} from '../focusWindow.js'
-import {
   bindStatsDisclosure,
   consumePendingDrawer,
   isPhoneViewport,
@@ -827,32 +822,16 @@ export function bootEnglish(root) {
     })
   }
 
-  function passageVisibleBounds() {
-    const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
-    const pageUnits = state.units.slice(page.start, page.end)
-    const pageStart = pageUnits[0]?.index ?? 0
-    const pageEnd = pageUnits[pageUnits.length - 1]?.index ?? 0
-    const currentIndex = state.units[state.unitIndex]?.index ?? pageStart
-    const text = state.passage?.text || ''
-
-    if (!isPhoneViewport() || state.mode === 'word') {
-      return { start: pageStart, end: pageEnd, clippedBefore: false, clippedAfter: false }
-    }
-
-    return focusWindowCharBounds(text, currentIndex, { start: pageStart, end: pageEnd }, {
-      linesBefore: 1,
-      linesAfter: 1,
-      charsPerLine: 36,
-    })
-  }
-
   function passageCharsHtml() {
     if (!state.passage) return ''
     const currentIndex = state.units[state.unitIndex]?.index ?? -1
     const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    const { start, end, clippedBefore, clippedAfter } = passageVisibleBounds()
+    const page = state.pages[state.pageIndex] || { start: 0, end: state.units.length }
+    const pageUnits = state.units.slice(page.start, page.end)
+    const start = pageUnits[0]?.index ?? 0
+    const end = pageUnits[pageUnits.length - 1]?.index ?? 0
 
-    const chars = [...state.passage.text]
+    return [...state.passage.text]
       .map((ch, i) => {
         if (i < start || i > end) return ''
         const classes = ['ch']
@@ -866,28 +845,18 @@ export function bootEnglish(root) {
         return `<span class="${classes.join(' ')}" data-i="${i}">${shown}</span>`
       })
       .join('')
-
-    return `${clippedBefore ? focusFadeBeforeHtml() : ''}${chars}${clippedAfter ? focusFadeAfterHtml() : ''}`
   }
 
   function patchLive() {
     if (!state.passage || state.completed || state.sessionFinished) return
     const currentIndex = state.units[state.unitIndex]?.index ?? -1
     const doneIndexes = new Set(state.units.slice(0, state.unitIndex).map((u) => u.index))
-    const passageEl = document.querySelector('.english-passage')
-    const useFocus = isPhoneViewport() && state.mode !== 'word'
-
-    if (useFocus && passageEl) {
-      passageEl.innerHTML = passageCharsHtml()
-      passageEl.closest('.passage-scroll')?.classList.add('focus-window')
-    } else {
-      document.querySelectorAll('.passage .ch').forEach((el) => {
-        const i = Number(el.dataset.i)
-        el.classList.toggle('done', doneIndexes.has(i))
-        el.classList.toggle('current', i === currentIndex)
-        el.classList.toggle('wrong', state.lastWrong && i === currentIndex)
-      })
-    }
+    document.querySelectorAll('.passage .ch').forEach((el) => {
+      const i = Number(el.dataset.i)
+      el.classList.toggle('done', doneIndexes.has(i))
+      el.classList.toggle('current', i === currentIndex)
+      el.classList.toggle('wrong', state.lastWrong && i === currentIndex)
+    })
     const metaProg = document.querySelector('.passage-progress')
     if (metaProg) {
       metaProg.textContent = `${state.unitIndex}/${state.units.length}${
@@ -1190,7 +1159,6 @@ export function bootEnglish(root) {
     const multiPage = state.pages.length > 1
     const progress = `${state.unitIndex}/${state.units.length}${state.passageWrong ? ` · err ${state.passageWrong}` : ''}`
     const canPrev = state.historyIndex > 0
-    const focusOn = isPhoneViewport()
 
     return `
       <div class="char-stage passage-stage">
@@ -1221,7 +1189,7 @@ export function bootEnglish(root) {
               </div>`
             : ''
         }
-        <div class="passage-scroll${focusOn ? ' focus-window' : ''}">
+        <div class="passage-scroll">
           <div class="passage english-passage">${passageCharsHtml()}</div>
         </div>
         <div class="typing-chrome">

@@ -1527,8 +1527,8 @@ button.scheme-btn:focus-visible {
   line-height: 1.5;
   letter-spacing: 0.02em;
   word-spacing: 0.05em;
-  word-break: normal;
-  overflow-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   white-space: normal;
   color: var(--ink);
 }
