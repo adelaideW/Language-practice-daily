@@ -743,6 +743,7 @@ button.scheme-btn:focus-visible {
   gap: 0.6rem;
   margin-top: 1rem;
   max-width: 100%;
+  flex: 0 0 auto;
 }
 
 .typing-chrome .pinyin-line {
@@ -915,7 +916,9 @@ button.scheme-btn:focus-visible {
 .passage-scroll {
   width: 100%;
   max-width: none;
-  max-height: min(42vh, 340px);
+  flex: 1 1 auto;
+  min-height: 10rem;
+  max-height: none;
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
@@ -1538,13 +1541,79 @@ button.scheme-btn:focus-visible {
 }
 
 .passage-scroll:has(.english-passage) {
-  max-height: min(46vh, 380px);
   padding: 0.35rem 0.35rem 0.75rem 0.15rem;
 }
 
 .passage-stage:has(.english-passage) .typing-chrome {
   margin-top: 1.15rem;
   gap: 0.7rem;
+}
+
+/* Passage / article: fill remaining viewport so typing input stays on-screen */
+#app:has(.passage-stage) {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.app-shell:has(.passage-stage),
+.app-content:has(.passage-stage),
+.skill-shell:has(.passage-stage) {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.skill-shell:has(.passage-stage) {
+  display: flex;
+  flex-direction: column;
+}
+
+.skill-shell:has(.passage-stage) > .skill-sticky-head {
+  flex: 0 0 auto;
+}
+
+.skill-host:has(.passage-stage) {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.skill-host:has(.passage-stage) > .topbar,
+.skill-host:has(.passage-stage) > .timer-bar,
+.skill-host:has(.passage-stage) > .stats-disclosure,
+.skill-host:has(.passage-stage) > .stats {
+  flex: 0 0 auto;
+}
+
+.skill-host:has(.passage-stage) > .main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.skill-host:has(.passage-stage) .practice-card {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.skill-host:has(.passage-stage) .passage-meta,
+.skill-host:has(.passage-stage) .page-bar {
+  flex: 0 0 auto;
+}
+
+.skill-host:has(.passage-stage) .main > .toolbar,
+.skill-host:has(.passage-stage) .keyboard-wrap,
+.skill-host:has(.passage-stage) .footer-note {
+  flex: 0 0 auto;
+}
+
+.skill-host:has(.passage-stage) .footer-note {
+  display: none;
 }
 
 .english-passage .ch {
@@ -3464,6 +3533,36 @@ button.scheme-btn:focus-visible {
   .main {
     padding: 0.55rem 0.85rem calc(5.5rem + env(safe-area-inset-bottom, 0px));
     gap: 0.55rem;
+  }
+
+  /* Article/sentence: card fills space above bottom nav; input stays visible */
+  .skill-host:has(.passage-stage) {
+    padding-bottom: calc(3.55rem + env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  .skill-host:has(.passage-stage) > .main {
+    padding-bottom: 0.45rem;
+    gap: 0.4rem;
+  }
+
+  .skill-host:has(.passage-stage) .practice-card {
+    padding: 0.65rem 0.7rem 0.55rem;
+  }
+
+  .skill-host:has(.passage-stage) .passage-scroll {
+    min-height: 6rem;
+  }
+
+  .skill-host:has(.passage-stage) .typing-chrome {
+    margin-top: 0.55rem;
+    padding-top: 0.35rem;
+    border-top: 1px solid var(--line);
+    width: 100%;
+  }
+
+  .skill-host:has(.passage-stage) .main > .toolbar {
+    display: none;
   }
 
   .practice-card {
