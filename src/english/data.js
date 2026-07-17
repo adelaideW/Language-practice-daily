@@ -5,6 +5,7 @@
  */
 
 import { isTypablePunct, isTypableSpace } from '../punct.js'
+import { ENGLISH_BOOKS } from './books.js'
 import { ENGLISH_ESSAYS } from './essays.js'
 
 /** @typedef {{ title: string, text: string }} Passage */
@@ -130,6 +131,7 @@ export const ENGLISH_ARTICLES = [
     title: 'The Little Prince (excerpt)',
     text: 'And now here is my secret, a very simple secret: It is only with the heart that one can see rightly; what is essential is invisible to the eye.',
   },
+  ...ENGLISH_BOOKS,
   ...ENGLISH_ESSAYS,
 ]
 
