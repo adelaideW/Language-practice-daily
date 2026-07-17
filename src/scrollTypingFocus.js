@@ -1,6 +1,7 @@
 /**
- * Keep the active typing glyph visible in `.passage-scroll`
- * (vertical + horizontal) so long lines/words stay reachable on mobile.
+ * Keep the active typing glyph vertically centered in `.passage-scroll`
+ * (except near the first/last lines). Horizontal overflow is handled only
+ * in the typing chrome (word suggestion + code slots).
  *
  * @param {{
  *   unitIndex: number,
@@ -27,35 +28,21 @@ export function scrollTypingFocusIntoView({
   } else {
     const sRect = scroller.getBoundingClientRect()
     const eRect = el.getBoundingClientRect()
-    const elMidY = eRect.top + eRect.height / 2
-    const viewMidY = sRect.top + sRect.height / 2
-    const deltaY = elMidY - viewMidY
-    if (Math.abs(deltaY) >= 4) {
+    const elMid = eRect.top + eRect.height / 2
+    const viewMid = sRect.top + sRect.height / 2
+    const delta = elMid - viewMid
+    if (Math.abs(delta) >= 4) {
       scroller.scrollTo({
-        top: scroller.scrollTop + deltaY,
+        top: scroller.scrollTop + delta,
         behavior: 'smooth',
       })
     }
   }
 
-  // Always keep the current character horizontally in view when a line is wider than the screen.
-  const sRect = scroller.getBoundingClientRect()
-  const eRect = el.getBoundingClientRect()
-  const pad = 24
-  let deltaX = 0
-  if (eRect.left < sRect.left + pad) deltaX = eRect.left - sRect.left - pad
-  else if (eRect.right > sRect.right - pad) deltaX = eRect.right - sRect.right + pad
-  if (Math.abs(deltaX) >= 2) {
-    scroller.scrollTo({
-      left: scroller.scrollLeft + deltaX,
-      behavior: 'smooth',
-    })
-  }
-
   scrollTypingChromeIntoView()
 }
 
-/** Keep the current code slot / hint letter visible in the typing chrome. */
+/** Keep the current word suggestion / code slot visible when wider than the screen. */
 export function scrollTypingChromeIntoView() {
   const slot = document.querySelector('.code-progress .code-slot.is-current, .code-progress .code-slot.error')
   const progress = document.querySelector('.code-progress')

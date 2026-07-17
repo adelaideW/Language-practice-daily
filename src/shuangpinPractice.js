@@ -944,8 +944,8 @@ function passageVisibleBounds() {
   }
 
   return focusWindowCharBounds(text, currentIndex, { start: pageStart, end: pageEnd }, {
-    linesBefore: 2,
-    linesAfter: 2,
+    linesBefore: 1,
+    linesAfter: 1,
     charsPerLine: 16,
   })
 }

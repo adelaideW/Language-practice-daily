@@ -743,8 +743,6 @@ button.scheme-btn:focus-visible {
   gap: 0.6rem;
   margin-top: 1rem;
   max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 .typing-chrome .pinyin-line {
@@ -752,6 +750,7 @@ button.scheme-btn:focus-visible {
   overflow-x: auto;
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .passage {
@@ -918,17 +917,15 @@ button.scheme-btn:focus-visible {
   max-width: none;
   max-height: min(42vh, 340px);
   overflow-y: auto;
-  overflow-x: auto;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   padding: 0.15rem 0.2rem 0.55rem 0;
   align-self: stretch;
   -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 }
 
 .passage-scroll .passage {
   margin: 0;
-  min-width: min-content;
 }
 
 .mistake-list.user-lib .linkish {
@@ -3097,20 +3094,6 @@ button.scheme-btn:focus-visible {
 
   .spk-mic-status {
     display: none;
-  }
-
-  /* Long words/lines: scroll horizontally and keep current char in view */
-  .passage-scroll {
-    overflow-x: auto;
-  }
-
-  .passage-scroll .passage,
-  .passage-scroll .english-passage {
-    width: max-content;
-    min-width: 100%;
-    max-width: none;
-    overflow-wrap: normal;
-    word-break: normal;
   }
 
   /* Float above the fixed mic while recording */

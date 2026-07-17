@@ -921,8 +921,8 @@ export function bootJapanese(root) {
     let clippedAfter = false
     if (isPhoneViewport()) {
       const win = focusWindowSegBounds(curSeg, { start: pageSegStart, end: pageSegEnd }, {
-        before: 8,
-        after: 10,
+        before: 4,
+        after: 5,
       })
       start = win.start
       end = win.end
